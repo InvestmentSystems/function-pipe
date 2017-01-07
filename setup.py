@@ -5,10 +5,8 @@ from codecs import open
 from os import path
 
 here = path.abspath(path.dirname(__file__))
-
-# Get the long description from the README file
-#with open(path.join(here, 'README.md'), encoding='utf-8') as f:
-    #long_description = f.read()
+with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+    long_description = f.read()
 
 long_description = 'TODO'
 
@@ -19,12 +17,8 @@ setup(
     description='Tools for extended function composition and pipelines',
     long_description=long_description,
 
-    # The project's main homepage.
-    url='https://github.com/pypa/sampleproject',
-
-    # Author details
-    author='The Python Packaging Authority',
-    author_email='pypa-dev@googlegroups.com',
+    url='https://github.com/InvestmentSystems/function-pipe',
+    author='Christopher Ariza',
     license='MIT',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -38,8 +32,6 @@ setup(
         ],
 
     keywords='functionnode pipenode composition pipeline pipe',
-    py_modules=['function_pipe.py'],
-
-    #install_requires=['peppercorn'],
+    py_modules=['function_pipe'], # no .py!
 
 )
