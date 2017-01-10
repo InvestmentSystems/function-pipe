@@ -124,7 +124,7 @@ Finally, to open the resulting plot for viewing, we will use Python's ``webbrows
         webbrowser.open(fp)
 
 
-With all functions decorated as ``FunctionNode``s, we can create a composition expression. The partialed ``start`` and ``end`` arguments permits selecting different year ranges. Notice that the data passed between nodes changes, from an ``OrderedDict`` of DataFrames, to a DataFrame, to a file path string. To call the composition expression ``f``, we simply pass the necessary argument of the *innermost* ``load_data_dict`` function.
+With all functions decorated as ``FunctionNode``, we can create a composition expression. The partialed ``start`` and ``end`` arguments permits selecting different year ranges. Notice that the data passed between nodes changes, from an ``OrderedDict`` of DataFrames, to a DataFrame, to a file path string. To call the composition expression ``f``, we simply pass the necessary argument of the *innermost* ``load_data_dict`` function.
 
 .. code-block:: python
 
