@@ -9,6 +9,7 @@ Contents:
    :maxdepth: 2
 
    intro
+   usage_strings
 
 Indices and tables
 ==================

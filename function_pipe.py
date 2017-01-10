@@ -34,7 +34,9 @@ def _wrap_unary(func):
     '''Decorator for operator overloads. Given a higher order function that takes one args, wrap it in a FunctionNode function and provide documentation labels.
     '''
     def unary(lhs):
-        return FunctionNode(func(lhs),
+        # wrapped function will prepare correct class, even if a constant
+        cls = PipeNode if isinstance(lhs, PipeNode) else FunctionNode
+        return cls(func(lhs),
             doc_function=func,
             doc_args=(lhs,)
             )
@@ -44,7 +46,9 @@ def _wrap_binary(func):
     '''Decorator for operators. Given a higher order function that takes two args, wrap it in a FunctionNode function and provide documentation labels.
     '''
     def binary(lhs, rhs):
-        return FunctionNode(func(lhs, rhs),
+        # wrapped function will prepare correct class, even if a constant
+        cls = PipeNode if isinstance(lhs, PipeNode) else FunctionNode
+        return cls(func(lhs, rhs),
             doc_function=func,
             doc_args=(lhs, rhs)
             )
@@ -86,13 +90,6 @@ def _repr(f, doc_args=True):
     return get_function_name(f)
 
 
-# PipeNode kwargs
-PREDECESSOR_RETURN = 'predecessor_return'
-PREDECESSOR_PN = 'predecessor_pn'
-PN_INPUT = 'pn_input'
-PN_INPUT_SET = {PN_INPUT}
-PIPE_NODE_KWARGS = {PREDECESSOR_RETURN, PREDECESSOR_PN, PN_INPUT}
-
 
 class FunctionNode:
     '''A wrapper for a callable that can reside in an expression of numerous FunctionNodes, or be modified with unary or binary operators.
@@ -102,8 +99,6 @@ class FunctionNode:
             '_doc_function',
             '_doc_args',
             '_doc_kwargs',
-            '_pipe_node_state',
-            '_pipe_node_predecessor'
             )
 
     #---------------------------------------------------------------------------
@@ -113,8 +108,8 @@ class FunctionNode:
             doc_function=None,
             doc_args=None,
             doc_kwargs=None,
-            pipe_node_state=None,
-            pipe_node_predecessor=None
+            call_state=None,
+            predecessor=None
             ):
         '''
         Args:
@@ -136,8 +131,6 @@ class FunctionNode:
             self._doc_function = doc_function if doc_function else self._function
             self._doc_args = doc_args
             self._doc_kwargs = doc_kwargs
-            self._pipe_node_state = pipe_node_state
-            self._pipe_node_predecessor = pipe_node_predecessor
 
     @property
     def unwrap(self):
@@ -172,21 +165,6 @@ class FunctionNode:
         return fn
 
     #---------------------------------------------------------------------------
-    # pipe node properties
-
-    @property
-    def pipe_node_state(self):
-        return self._pipe_node_state
-
-    @property
-    def is_pipe_node(self):
-        return bool(self._pipe_node_state)
-
-    @property
-    def predecessor(self):
-        return self._pipe_node_predecessor
-
-    #---------------------------------------------------------------------------
     # all unary operators return a function; the _wrap_unary decorator then wraps this function in a FunctionNode
 
     @_wrap_unary
@@ -212,90 +190,90 @@ class FunctionNode:
     @_wrap_binary
     def __add__(lhs, rhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) +
-                FunctionNode(rhs)(*args, **kwargs))
+                lhs.__class__(lhs)(*args, **kwargs) +
+                lhs.__class__(rhs)(*args, **kwargs))
 
     @_wrap_binary
     def __sub__(lhs, rhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) -
-                FunctionNode(rhs)(*args, **kwargs))
+                lhs.__class__(lhs)(*args, **kwargs) -
+                lhs.__class__(rhs)(*args, **kwargs))
 
     @_wrap_binary
     def __mul__(lhs, rhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) *
-                FunctionNode(rhs)(*args, **kwargs))
+                lhs.__class__(lhs)(*args, **kwargs) *
+                lhs.__class__(rhs)(*args, **kwargs))
 
     @_wrap_binary
     def __truediv__(lhs, rhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) /
-                FunctionNode(rhs)(*args, **kwargs))
+                lhs.__class__(lhs)(*args, **kwargs) /
+                lhs.__class__(rhs)(*args, **kwargs))
 
     @_wrap_binary
     def __pow__(lhs, rhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) **
-                FunctionNode(rhs)(*args, **kwargs))
+                lhs.__class__(lhs)(*args, **kwargs) **
+                lhs.__class__(rhs)(*args, **kwargs))
 
     @_wrap_binary
     def __radd__(rhs, lhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) +
-                FunctionNode(rhs)(*args, **kwargs))
+                rhs.__class__(lhs)(*args, **kwargs) +
+                rhs.__class__(rhs)(*args, **kwargs))
 
     @_wrap_binary
     def __rsub__(rhs, lhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) -
-                FunctionNode(rhs)(*args, **kwargs))
+                rhs.__class__(lhs)(*args, **kwargs) -
+                rhs.__class__(rhs)(*args, **kwargs))
 
     @_wrap_binary
     def __rmul__(rhs, lhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) *
-                FunctionNode(rhs)(*args, **kwargs))
+                rhs.__class__(lhs)(*args, **kwargs) *
+                rhs.__class__(rhs)(*args, **kwargs))
 
     @_wrap_binary
     def __rtruediv__(rhs, lhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) /
-                FunctionNode(rhs)(*args, **kwargs))
+                rhs.__class__(lhs)(*args, **kwargs) /
+                rhs.__class__(rhs)(*args, **kwargs))
 
     # comparison operators, expected to return booleans
     @_wrap_binary
     def __eq__(lhs, rhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) ==
-                FunctionNode(rhs)(*args, **kwargs))
+                lhs.__class__(lhs)(*args, **kwargs) ==
+                lhs.__class__(rhs)(*args, **kwargs))
 
     @_wrap_binary
     def __lt__(lhs, rhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) <
-                FunctionNode(rhs)(*args, **kwargs))
+                lhs.__class__(lhs)(*args, **kwargs) <
+                lhs.__class__(rhs)(*args, **kwargs))
     @_wrap_binary
     def __le__(lhs, rhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) <=
-                FunctionNode(rhs)(*args, **kwargs))
+                lhs.__class__(lhs)(*args, **kwargs) <=
+                lhs.__class__(rhs)(*args, **kwargs))
     @_wrap_binary
     def __gt__(lhs, rhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) >
-                FunctionNode(rhs)(*args, **kwargs))
+                lhs.__class__(lhs)(*args, **kwargs) >
+                lhs.__class__(rhs)(*args, **kwargs))
     @_wrap_binary
     def __ge__(lhs, rhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) >=
-                FunctionNode(rhs)(*args, **kwargs))
+                lhs.__class__(lhs)(*args, **kwargs) >=
+                lhs.__class__(rhs)(*args, **kwargs))
 
     @_wrap_binary
     def __ne__(lhs, rhs):
         return (lambda *args, **kwargs:
-                FunctionNode(lhs)(*args, **kwargs) !=
-                FunctionNode(rhs)(*args, **kwargs))
+                lhs.__class__(lhs)(*args, **kwargs) !=
+                lhs.__class__(rhs)(*args, **kwargs))
 
     #---------------------------------------------------------------------------
     # composition operators
@@ -320,6 +298,83 @@ class FunctionNode:
         '''
         return compose(lhs, rhs)
 
+
+
+#-------------------------------------------------------------------------------
+# PipeNode and utiltiies
+
+# PipeNode kwargs
+PREDECESSOR_RETURN = 'predecessor_return'
+PREDECESSOR_PN = 'predecessor_pn'
+PN_INPUT = 'pn_input'
+PN_INPUT_SET = {PN_INPUT}
+PIPE_NODE_KWARGS = {PREDECESSOR_RETURN, PREDECESSOR_PN, PN_INPUT}
+
+
+class PipeNode(FunctionNode):
+    '''The multi-call structure of PipeNodes moves a FunctionNode between three states.
+    '''
+
+    # states
+    FACTORY = 'FACTORY'
+    EXPRESSION = 'EXPRESSION'
+    PROCESS = 'PROCESS'
+
+    __slots__ = FunctionNode.__slots__ + (
+            '_call_state',
+            '_predecessor'
+            )
+
+    #---------------------------------------------------------------------------
+    def __init__(self,
+                function,
+                *,
+                doc_function=None,
+                doc_args=None,
+                doc_kwargs=None,
+                call_state=None,
+                predecessor=None
+                ):
+        super().__init__(function=function,
+                doc_function=doc_function,
+                doc_args=doc_args,
+                doc_kwargs=doc_kwargs
+                )
+        self._call_state = call_state
+        self._predecessor = predecessor
+
+    def __str__(self):
+        return '<PN: {}>'.format(_repr(self))
+
+    #---------------------------------------------------------------------------
+    # pipe node properties
+
+    @property
+    def call_state(self):
+        return self._call_state
+
+    @property
+    def predecessor(self):
+        return self._predecessor
+
+    def partial(*args, **kwargs):
+        raise NotImplementedError
+
+    #---------------------------------------------------------------------------
+
+    def __rshift__(lhs, rhs):
+        raise NotImplementedError
+
+    def __rrshift__(rhs, lhs):
+        raise NotImplementedError
+
+    def __lshift__(lhs, rhs):
+        raise NotImplementedError
+
+    def __llshift__(rhs, lhs):
+        raise NotImplementedError
+
+
     def __or__(lhs, rhs):
         '''Call RHS with LHS as an argument; left is passed as kwarg PREDECESSOR_PN. This calls the RHS immediately and does not return an FN unless prepared as a PipeNode
         '''
@@ -328,17 +383,16 @@ class FunctionNode:
     def __ror__(rhs, lhs):
         return rhs(**{PREDECESSOR_PN:lhs})
 
+    #---------------------------------------------------------------------------
+    def __getitem__(self, pn_input):
+        '''Given an argument, treat it as a PipeNodeInput called on the innermost.
+        '''
+        pni = pn_input if pn_input else PipeNodeInput()
+        return self(**{PN_INPUT:pni})
+
 
 #-------------------------------------------------------------------------------
-# pipe node utilities
-
-class PipeNodeState:
-    '''The multi-call structure of PipeNodes moves a FunctionNode between three states.
-    '''
-    FACTORY = 'FACTORY'
-    EXPRESSION = 'EXPRESSION'
-    PROCESS = 'PROCESS'
-
+# decorator utilities
 
 def _broadcast(factory_args,
         factory_kwargs,
@@ -347,11 +401,11 @@ def _broadcast(factory_args,
     '''Factor args/kwargs are those given to pipe_node_factory at the expression level. Processing args/kwargs are those given as the initial input, and used to call all processing functions. After calling factor args with processing args, the result is used as core_callable args
     '''
     core_callable_args = [arg(*processing_args, **processing_kwargs)
-            if isinstance(arg, FunctionNode) else arg
+            if isinstance(arg, PipeNode) else arg
             for arg in factory_args]
 
     core_callable_kwargs = {kw: arg(*processing_args, **processing_kwargs)
-            if isinstance(arg, FunctionNode) else arg
+            if isinstance(arg, PipeNode) else arg
             for kw, arg in factory_kwargs.items()}
 
     return core_callable_args, core_callable_kwargs
@@ -367,9 +421,9 @@ def core_logger(core_callable):
         return post
     return wrapped
 
-
 #-------------------------------------------------------------------------------
 # decorators
+
 
 def pipe_kwarg_bind(*key_positions):
     '''Using FN labels as arguments, define the what positional arguments of the wrapped function will receive from the common FN kwargs.
@@ -383,7 +437,7 @@ def pipe_kwarg_bind(*key_positions):
             target_kwargs = {k:v for k, v in kwargs.items()
                     if k not in PIPE_NODE_KWARGS}
             return f(*target_args, *args, **target_kwargs)
-        return FunctionNode(wrapped, doc_function=f)
+        return PipeNode(wrapped, doc_function=f)
     return decorator
 
 
@@ -442,22 +496,22 @@ def pipe_node_factory(core_callable,
                 return decorated_core_callable(*core_callable_args,
                         **core_callable_kwargs)
 
-            # we must return a FunctionNode here, as this is the final thing returned and might be passed on to another series func
-            return FunctionNode(process_f,
+            # we must return a PipeNode here, as this is the final thing returned and might be passed on to another series func
+            return PipeNode(process_f,
                     doc_function=core_callable,
                     #doc_args=e_args,
                     #doc_kwargs=e_kwargs, # TODO: does not work
-                    pipe_node_state=PipeNodeState.PROCESS,
-                    pipe_node_predecessor=predecessor_pn)
-        return FunctionNode(expression_f,
+                    call_state=PipeNode.PROCESS,
+                    predecessor=predecessor_pn)
+        return PipeNode(expression_f,
                 doc_function=core_callable,
                 doc_args=f_args,
                 doc_kwargs=f_kwargs,
-                pipe_node_state=PipeNodeState.EXPRESSION)
+                call_state=PipeNode.EXPRESSION)
     # return a function node so as to make doc_function available in test
-    return FunctionNode(factory_f,
+    return PipeNode(factory_f,
             doc_function=core_callable,
-            pipe_node_state=PipeNodeState.FACTORY)
+            call_state=PipeNode.FACTORY)
 
 
 def pipe_node(core_callable, core_decorator=core_logger):
