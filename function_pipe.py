@@ -298,6 +298,15 @@ class FunctionNode:
         '''
         return compose(lhs, rhs)
 
+    def __or__(lhs, rhs):
+        '''Only implemented for PipeNode.
+        '''
+        raise NotImplementedError
+
+    def __ror__(rhs, lhs):
+        '''Only implemented for PipeNode.
+        '''
+        raise NotImplementedError
 
 
 #-------------------------------------------------------------------------------
@@ -346,6 +355,11 @@ class PipeNode(FunctionNode):
     def __str__(self):
         return '<PN: {}>'.format(_repr(self))
 
+    def partial(*args, **kwargs):
+        '''PipeNode calling is dictated by the PipeNode protocol; partial-like behavior in expressions shold be achived with functions decorated with the  pipe_node_factory decorator.
+        '''
+        raise NotImplementedError
+
     #---------------------------------------------------------------------------
     # pipe node properties
 
@@ -357,23 +371,28 @@ class PipeNode(FunctionNode):
     def predecessor(self):
         return self._predecessor
 
-    def partial(*args, **kwargs):
-        raise NotImplementedError
-
     #---------------------------------------------------------------------------
+    # composition operators
 
     def __rshift__(lhs, rhs):
+        '''Only implemented for FunctionNode.
+        '''
         raise NotImplementedError
 
     def __rrshift__(rhs, lhs):
+        '''Only implemented for FunctionNode.
+        '''
         raise NotImplementedError
 
     def __lshift__(lhs, rhs):
+        '''Only implemented for FunctionNode.
+        '''
         raise NotImplementedError
 
     def __llshift__(rhs, lhs):
+        '''Only implemented for FunctionNode.
+        '''
         raise NotImplementedError
-
 
     def __or__(lhs, rhs):
         '''Call RHS with LHS as an argument; left is passed as kwarg PREDECESSOR_PN. This calls the RHS immediately and does not return an FN unless prepared as a PipeNode
@@ -383,9 +402,10 @@ class PipeNode(FunctionNode):
     def __ror__(rhs, lhs):
         return rhs(**{PREDECESSOR_PN:lhs})
 
+
     #---------------------------------------------------------------------------
     def __getitem__(self, pn_input):
-        '''Given an argument, treat it as a PipeNodeInput called on the innermost.
+        '''Call self with the passed PipeNodeInput.
         '''
         pni = pn_input if pn_input else PipeNodeInput()
         return self(**{PN_INPUT:pni})
@@ -517,7 +537,7 @@ def pipe_node_factory(core_callable,
 def pipe_node(core_callable, core_decorator=core_logger):
     '''Decorate a function that takes no expression-level args.
     '''
-    # create a factory and call it once with no args to get an expresion-leve function
+    # create a factory and call it once with no args to get an expresion-level function
     return pipe_node_factory(core_callable,
             core_decorator=core_decorator)()
 
@@ -542,33 +562,21 @@ class PipeNodeInput:
         return self._store.items()
 
 
-
-def run(f, pn_input=None):
-    '''Utility function to run a PipeNode with a passed-in (or default supplied) PN_INPUT.
-    '''
-    pni = pn_input if pn_input else PipeNodeInput()
-    return f(**{PN_INPUT:pni})
-
 #-------------------------------------------------------------------------------
 # utility PipeNodes
 
 @pipe_node_factory
 def store(label, **kwargs):
-    '''Store an interrim value in a FunctionNodePAInput subclass.
-    '''
     kwargs[PN_INPUT].store(label, kwargs[PREDECESSOR_RETURN])
     return kwargs[PREDECESSOR_RETURN]
 
 @pipe_node_factory
 def recall(label, **kwargs):
-    '''Recall an interrim in a FunctionNodePAInput subclass.
-    '''
-    #import ipdb; ipdb.set_trace()
     return kwargs[PN_INPUT].recall(label)
 
 @pipe_node_factory
 def call(*args, **kwargs):
-    '''Simply call the arguments with the PNInput as necessary (which happens in the broadcast routine in handling *args, but do not do anything with their results. It is assumed that previous things called will store their results.
+    '''Call the PipeNode arguments with the PipeNodeInput as necessary (which happens in the broadcast routine in handling *args)
     '''
     return args[-1] # the last result is returned
 

@@ -71,11 +71,10 @@ def fn():
 
     # we can intergrate functions that take arguments through partialling, using either args or kwargs
 
-    replace_arg = fpn.FunctionNode(lambda src, dst, s: s.replace(src, dst))
-    replace_kwarg = fpn.FunctionNode(lambda s, src, dst: s.replace(src, dst))
+    replace = fpn.FunctionNode(lambda s, src, dst: s.replace(src, dst))
 
-    p = c >> (b + '_') * 2 >> replace_arg.partial('b', 'B$')
-    q = d >> e * 2 >> replace_kwarg.partial(src='d', dst='%D')
+    p = c >> (b + '_') * 2 >> replace.partial(src='b', dst='B$')
+    q = d >> e * 2 >> replace.partial(src='d', dst='%D')
     f = (p + q) * 2 + q
 
     print(f('*'))
@@ -86,10 +85,13 @@ def fn():
 def pn():
     # if we are willing to adjust our functions about, we can do even more with PipeNodes. PipeNodes have a protocal; they have to be called in a certain way, and have certain expectations regarding arguments. PipeNodes are created through decorators. Decorated functions receive PipeNode qwargs
 
-    a = fpn.pipe_node(lambda **kwargs: kwarg[fpn.PREDECESSOR_RETURN] + 'a')
+    a = fpn.pipe_node(lambda **kwargs: kwargs[fpn.PREDECESSOR_RETURN] + 'a')
 
     # another way of doing the same thing
-    a = fpn.pipe_node(fpn.pipe_kwarg_bind(fpn.PREDECESSOR_RETURN)(lambda x: x + 'a'))
+    @fpn.pipe_node
+    @fpn.pipe_kwarg_bind(fpn.PREDECESSOR_RETURN)
+    def a(s):
+        return s + 'a'
 
     # capturing the initial input is not automatic
     init = fpn.pipe_node(lambda **kwargs: kwargs[fpn.PN_INPUT])
@@ -107,7 +109,11 @@ def pn():
     # can also be done as the following
 
     print(f(**{fpn.PN_INPUT: '*'}))
+    assert f(**{fpn.PN_INPUT: '+'}) == '+abc'
+
     print(f['*'])
+    assert f['*'] == '*abc'
+
 
     # with pipenodes, all nodes have access to the PN_INPUT through the common kwargs
 
@@ -149,13 +155,12 @@ def pn():
     # we nee dot change our init function to read the chars attr
     init = fpn.pipe_node(lambda **kwargs: kwargs[fpn.PN_INPUT].chars)
 
-    pni = Input('x')
-
     p = init | cat('www') | fpn.store('p')
     q = init | cat('@@') | cat('__') * 2 | fpn.store('q')
     r = init | a | cat(fpn.recall('p')) | cat('c') * 3 | interleave(fpn.recall('q'))
     f = fpn.call(p, q, r)
 
+    pni = Input('x')
     print(f[pni])
 
     pni = Input('x') # must create a new one
@@ -165,6 +170,6 @@ def pn():
 
 
 if __name__ == '__main__':
-    fn()
+    #fn()
     pn()
 
