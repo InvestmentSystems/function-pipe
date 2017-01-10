@@ -157,7 +157,7 @@ Now we can create a PipeNode expression that evaluates to a single function ``f`
     assert f(**{fpn.PN_INPUT: '*'}) == '*abc'
     assert f(**{fpn.PN_INPUT: '+'}) == '+abc'
 
-We can avoid calling with a key-word argument by using the ``__getitem__`` syntax to call the passed argument as the fpn.PN_INPUT.
+We can avoid calling with a key-word argument by using the ``__getitem__`` syntax to call the passed argument as the ``fpn.PN_INPUT``.
 
 .. code-block:: python
 

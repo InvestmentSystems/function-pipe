@@ -10,6 +10,7 @@ Contents:
 
    intro
    usage_strings
+   usage_df
 
 Indices and tables
 ==================
