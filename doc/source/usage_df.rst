@@ -128,12 +128,12 @@ With all functions decorated as ``FunctionNode``s, we can create a composition e
 
 .. code-block:: python
 
-    f = (FN.load_data_dict
-        >> FN.gender_count_per_year
-        >> FN.year_range.partial(start=1950, end=2000)
-        >> FN.percent
-        >> FN.plot
-        >> FN.open_plot)
+    f = (load_data_dict
+        >> gender_count_per_year
+        >> year_range.partial(start=1950, end=2000)
+        >> percent
+        >> plot
+        >> open_plot)
 
     f(FP_ZIP)
 
@@ -143,12 +143,12 @@ If, for the sake of display, we want to convert the floating-point percents to i
 
 .. code-block:: python
 
-    f = (FN.load_data_dict
-        >> FN.gender_count_per_year
-        >> FN.year_range.partial(start=1950, end=2000)
-        >> (FN.percent * 100)
-        >> FN.plot
-        >> FN.open_plot)
+    f = (load_data_dict
+        >> gender_count_per_year
+        >> year_range.partial(start=1950, end=2000)
+        >> (percent * 100)
+        >> plot
+        >> open_plot)
 
     f(FP_ZIP)
 
@@ -289,7 +289,7 @@ To support graphing the gender distribution for multiple names simultaneously, w
         return df
 
 
-Now we can create two PipeNode expressions for each name we are investigating. These are then passed to ``merge_gender_data`` as key-word arguments. In all cases the raw data DataFrame is now retained with the ``store`` PipeNode. After plotting and viewing the plot, we can retrieve stored DataFrames by calling the ``store_items`` method of PipeNodeInput. Here, we load each DF into a sheet of an Excel workbook outside of the PipeNode call. This could also be done as a PipeNode.
+Now we can create two PipeNode expressions for each name we are investigating. These are then passed to ``merge_gender_data`` as key-word arguments. In all cases the raw data DataFrame is now retained with the ``store`` PipeNode. After plotting and viewing the plot, we can retrieve stored DataFrames by calling the ``store_items`` method of PipeNodeInput. Here, we load each DataFrame into a sheet of an Excel workbook outside of the PipeNode call. This could also be done as a PipeNode.
 
 .. code-block:: python
 
