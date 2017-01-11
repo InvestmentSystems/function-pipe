@@ -22,7 +22,7 @@ This assumes the function_pipe.py module has been installed in site-packages or 
 FunctionNodes for Function Composition
 ------------------------------------------
 
-FunctionNodes wrap callables. These callables can be lambdas, functions, or callable instances. We can wrap them directly (wuth a function call) or using FunctionNode as a function decorator.
+FunctionNodes wrap callables. These callables can be lambdas, functions, or callable instances. We can wrap them directly (with a function call) or using FunctionNode as a function decorator.
 
 Using ``lambda`` for brevity, we can start with a number of simple functions that concatenate a string to their input.
 
@@ -67,7 +67,7 @@ Depending on your perspective, a linear presentation from left to right may not 
     f = a << b << c << d << e
     assert f('*') == '*edcba'
 
-And even though it is ill-advised on grounds of poor readability and unnecessary conceptial complexity, you can do bidirectional composition:
+And even though it is ill-advised on grounds of poor readability and unnecessary conceptual complexity, you can do bidirectional composition:
 
 .. code-block:: python
 
