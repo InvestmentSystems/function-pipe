@@ -7,8 +7,7 @@ import webbrowser
 
 import requests
 import pandas as pd
-
-from RALib.core import function_pipe as fpn
+import function_pipe as fpn
 
 
 # source url

@@ -8,11 +8,9 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
-long_description = 'TODO'
-
 setup(
     name='function-pipe',
-    version='1.0.0',
+    version='1.0.2',
 
     description='Tools for extended function composition and pipelines',
     long_description=long_description,

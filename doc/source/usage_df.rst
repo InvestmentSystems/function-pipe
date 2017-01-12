@@ -311,7 +311,7 @@ Now we can create two expressions for each name we are investigating. These are 
 .. image:: _static/usage_df_xlsx.png
 
 
-These examples demonstrate organizing data processing routines with ``PipeNode`` expressions. Using ``PipeNodeInput`` sublcasses, data acesss routines can be centralized and made as efficient as possible. Further, ``PipeNodeInput`` sublcasses can provide common parameters, such as output directories, to all nodes. Finally, the result of sub-expressions can stored and recalled within ``PipeNode`` expression, or after ``PipeNode`` execution for writing to disk.
+These examples demonstrate organizing data processing routines with ``PipeNode`` expressions. Using ``PipeNodeInput`` sublcasses, data acesss routines can be centralized and made as efficient as possible. Further, ``PipeNodeInput`` sublcasses can provide common parameters, such as output directories, to all nodes. Finally, the results of sub-expressions can be stored and recalled within ``PipeNode`` expressions, or extracted after ``PipeNode`` execution for writing to disk.
 
 
 

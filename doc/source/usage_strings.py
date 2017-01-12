@@ -1,7 +1,7 @@
 
 
 
-from RALib.core import function_pipe as fpn
+import function_pipe as fpn
 
 
 # create string lambda function
