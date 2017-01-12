@@ -3,14 +3,14 @@
 Usage with DataFrame Processing
 ==================================
 
-FunctionNode and PipeNode were built in large part to handle data processing pipelines with Pandas Series and DataFrames. The following examples do simple things with data, but provide a framework that can be expanded to meet a wide range of needs.
+The ``FunctionNode`` and ``PipeNode`` were built in large part to handle data processing pipelines with Pandas ``Series`` and ``DataFrame``. The following examples do simple things with data, but provide a framework that can be expanded to meet a wide range of needs.
 
 
 
 Sample Data
 ---------------------------------------
 
-Following an example in Wes McKinney's *Python for Data Analysis, 2nd Edition* (2017), these examples will use child birth name records from the Social Security Administration. Presently, this data is found at the following URL. We will write Python code to download and handle the file.
+Following an example in Wes McKinney's *Python for Data Analysis, 2nd Edition* (2017), these examples will use U.S. child birth name records from the Social Security Administration. Presently, this data is found at the following URL. We will write Python code to automatically download this data.
 
 https://www.ssa.gov/oact/babynames/names.zip
 
@@ -20,9 +20,9 @@ https://www.ssa.gov/oact/babynames/names.zip
 DataFrame Processing with FunctionNode
 ---------------------------------------
 
-``FunctionNode``-wraped functions can be used to link functions in linear compositions. What is passed in the pipes can change, as long as the node is prepared to receive the value of its predecessor. As before, the *innermost* node receives its input only after the complete composition expression is evaluated to a single function and called with the *initial input*.
+``FunctionNode``-wraped functions can be used to link functions in linear compositions. What is passed in the pipes can change, as long as a node is prepared to receive the value of its predecessor. As before, *core callables* are called only after the complete composition expression is evaluated to a single function and called with the *initial input*.
 
-We will use the follow imports throughout these examples. The ``requests`` and ``pandas`` third-party packages are be easily installed with PIP.
+We will use the follow imports throughout these examples. The ``requests`` and ``pandas`` third-party packages are easily installed with ``pip``.
 
 .. code-block:: python
 
@@ -35,7 +35,7 @@ We will use the follow imports throughout these examples. The ``requests`` and `
     import function_pipe as fpn
 
 
-We will introduce the component ``FunctionNode``-decorated functions one at a time. First, we need a function that, given a destination file path, will download the name data (if it does not already exist, read the zip, and load the data into an ``OrderedDictionary`` of DataFrames keyed by year. Each DataFrame has a column for "name", "gender", and "count". We will store the URL as a module-level constant, but it could just as well be passed.
+We will introduce the ``FunctionNode``-decorated functions one at a time. We start with a function that, given a destination file path, will download the dataset (if it does not already exist), read the zip, and load the data into an ``OrderedDictionary`` of ``DataFrame`` keyed by year. Each ``DataFrame`` has a column for "name", "gender", and "count". We will for now store the URL as a module-level constant.
 
 .. code-block:: python
 
@@ -51,7 +51,6 @@ We will introduce the component ``FunctionNode``-decorated functions one at a ti
 
         post = collections.OrderedDict()
         with zipfile.ZipFile(fp) as zf:
-            # get ZipInfo instances
             for zi in sorted(zf.infolist(), key=lambda zi: zi.filename):
                 fn = zi.filename
                 if fn.startswith('yob'):
@@ -60,11 +59,10 @@ We will introduce the component ``FunctionNode``-decorated functions one at a ti
                             zf.open(zi),
                             header=None,
                             names=('name', 'gender', 'count'))
-                    df['year'] = year
                     post[year] = df
         return post
 
-Next, we have a function that, given that same dictionary, produces a single DataFrame that lists, for each year, the total number of males and females recorded with columns for "M" and "F". Notice that the approach used below strictly requires the usage of an ``OrderedDictionary``.
+Next, we have a function that, given that same dictionary, produces a single ``DataFrame`` that lists, for each year, the total number of males and females recorded with columns for "M" and "F". Notice that the approach used below strictly requires the usage of an ``OrderedDictionary``.
 
 
 .. code-block:: python
@@ -81,19 +79,19 @@ Next, we have a function that, given that same dictionary, produces a single Dat
                 columns=('M', 'F'))
 
 
-Given columns that represent parts of whole, a utility function can be used to convert the previously created DataFrame into percent floats.
+Given row data that represent parts of whole, a utility function can be used to convert the previously created ``DataFrame`` into percent floats.
 
 .. code-block:: python
 
     @fpn.FunctionNode
     def percent(df):
         post = pd.DataFrame(index=df.index)
-        sum = df.sum(axis=1)
+        total = df.sum(axis=1)
         for col in df.columns:
-            post[col] = df[col] / sum
+            post[col] = df[col] / total
         return post
 
-A simple utility function can be used to select a contiguous year range from a DataFrame indexed by integer year values. We expect the ``start`` and ``end`` parameters to provided through partialing, and the DataFrame to be provided from the predecessor:
+A utility function can be used to select a contiguous year range from a ``DataFrame`` indexed by integer year values. We expect the ``start`` and ``end`` parameters to provided through partialing, and the ``DataFrame`` to be provided from the *predecessor return* value:
 
 .. code-block:: python
 
@@ -102,16 +100,13 @@ A simple utility function can be used to select a contiguous year range from a D
         return df.loc[start:end]
 
 
-We can plot any Pandas DataFrame using Pandas' interface to ``matplotlib`` (which will need to be installed and configured separately). The function takes optional options for a destination file path and a figure title (not yet used).
+We can plot any ``DataFrame`` using Pandas' interface to ``matplotlib`` (which will need to be installed and configured separately). The function takes an optional argument for destination file path and returns the same path after writing an image file.
 
 .. code-block:: python
 
     @fpn.FunctionNode
-    def plot(df, fp='/tmp/plot.png', title=None):
-        #print('calling plot', fp)
-        if os.path.exists(fp):
-            os.remove(fp)
-        ax = df.plot(title=title)
+    def plot(df, fp='/tmp/plot.png'):
+        ax = df.plot()
         ax.get_figure().savefig(fp)
         return fp
 
@@ -124,7 +119,7 @@ Finally, to open the resulting plot for viewing, we will use Python's ``webbrows
         webbrowser.open(fp)
 
 
-With all functions decorated as ``FunctionNode``, we can create a composition expression. The partialed ``start`` and ``end`` arguments permits selecting different year ranges. Notice that the data passed between nodes changes, from an ``OrderedDict`` of DataFrames, to a DataFrame, to a file path string. To call the composition expression ``f``, we simply pass the necessary argument of the *innermost* ``load_data_dict`` function.
+With all functions decorated as ``FunctionNode``, we can create a composition expression. The partialed ``start`` and ``end`` arguments permit selecting different year ranges. Notice that the data passed between nodes changes, from an ``OrderedDict`` of ``DataFrame``, to a ``DataFrame``, to a file path string. To call the composition expression ``f``, we simply pass the necessary argument of the *innermost* ``load_data_dict`` function.
 
 .. code-block:: python
 
@@ -154,7 +149,7 @@ If, for the sake of display, we want to convert the floating-point percents to i
 
 .. image:: _static/usage_df_plot-b.png
 
-While this approach is illustrative, it is limited. Using simple linear composition, as above, it is not possible with the same set of functions to produce multiple plots with the same data, or both write plots and output DataFrames in Excel. This and more is possible with ``PipeNode``.
+While this approach is illustrative, it is limited. Using simple linear composition, as above, it is not possible with the same set of functions to produce multiple plots with the same data, or both write plots and output ``DataFrame`` data in Excel. This and more is possible with ``PipeNode``.
 
 
 
@@ -163,11 +158,11 @@ While this approach is illustrative, it is limited. Using simple linear composit
 DataFrame Processing with PipeNode
 ---------------------------------------
 
-The PipeNode protocol requires that functions accept at least ``**kwargs``. Thus it is common to strucutre PipeNode functions differently than functions for simple composition. However, with the ``pipe_kwarg_bind`` decorator, a generic function can be modified for usage as a PipeNode. Also note that the *core callable* stored in a PipeNode can be accessed with the ``unwrap`` property.
+The *PipeNode protocol* requires that functions accept at least ``**kwargs``. Thus, it is common to strucutre ``PipeNode`` functions differently than functions for simple composition. However, with the ``pipe_kwarg_bind`` decorator, a generic function can be modified for usage as a ``PipeNode``. Note that the *core callable* stored in a ``PipeNode`` can be accessed with the ``unwrap`` property.
 
-While not required, creating a ``PipeNodeInput`` subclass to store data necessary throughout a processing pipeline is a useful approach. This also provides a convenient place to store those loading routines and configuration values.
+While not required, creating a ``PipeNodeInput`` subclass to expose data necessary throughout a processing pipeline is a useful approach. This also provides a convenient place to store data loading routines and configuration values.
 
-The following implementation of a PipeNodeInput subclass stores the URL as the class attribute ``URL_NAMES``, and stores ``output_dir`` as an instance attribute, configured with an argument passed at creation. The ``load_data_dict`` is essentially the same as before, though here it is a ``classmethod`` that reads ``URL_NAMES`` from the class. The resulting ``data_dict`` instance attribute is stored in the PipeNodeInput, making it available to every node.
+The following implementation of a ``PipeNodeInput`` subclass stores the URL as the class attribute ``URL_NAMES``, and stores the ``output_dir`` argument as an instance attribute. The ``load_data_dict`` function is essentially the same as before, though here it is a ``classmethod`` that reads ``URL_NAMES`` from the class. The resulting ``data_dict`` instance attribute is stored in the ``PipeNodeInput``, making it available to every node.
 
 .. code-block:: python
 
@@ -185,7 +180,6 @@ The following implementation of a PipeNodeInput subclass stores the URL as the c
 
             post = collections.OrderedDict()
             with zipfile.ZipFile(fp) as zf:
-                # get ZipInfo instances
                 for zi in sorted(zf.infolist(), key=lambda zi: zi.filename):
                     fn = zi.filename
                     if fn.startswith('yob'):
@@ -194,7 +188,6 @@ The following implementation of a PipeNodeInput subclass stores the URL as the c
                                 zf.open(zi),
                                 header=None,
                                 names=('name', 'gender', 'count'))
-                        df['year'] = year
                         post[year] = df
             return post
 
@@ -206,7 +199,7 @@ The following implementation of a PipeNodeInput subclass stores the URL as the c
 
 
 
-We can generalize the ``gender_count_per_year`` function from above to count names per gender per year. Names often have variants, so we can match names with a passed-in function ``name_match``. As this node takes an expression-level argument, we decorate it with ``pipe_node_factory``. Setting this fucntion to ``lambda n: True`` results in exactly the same funcionality as the ``gender_count_per_year`` function. Notice that we access the ``data_dict`` from the ``**kwargs`` key ``fpn.PN_INPUT``.
+We can generalize the ``gender_count_per_year`` function from above to count names per gender per year. Names often have variants, so we can match names with a passed-in function ``name_match``. As this node takes an *expression-level argument*, we decorate it with ``pipe_node_factory``. Setting this function to ``lambda n: True`` results in exactly the same functionality as the ``gender_count_per_year`` function. Notice that we access the ``data_dict`` from the ``**kwargs`` key ``fpn.PN_INPUT``.
 
 .. code-block:: python
 
@@ -227,7 +220,7 @@ We can generalize the ``gender_count_per_year`` function from above to count nam
                 columns=('M', 'F'))
 
 
-A number of functions used above as ``FunctionNode`` can be recast as ``PipeNode`` by simpy retrieving the ``fpn.PREDECESSOR_RETURN`` key from the passed ``**kwargs``. Notice that nodes that need expression-level arguments are decorated with ``pipe_node_factory``. The ``plot`` node now takes a ``file_name`` argument, as the ouput director is set in the PipeNode instance.
+A number of functions used above as ``FunctionNode`` can be recast as ``PipeNode`` by simpy retrieving the ``fpn.PREDECESSOR_RETURN`` key from the passed ``**kwargs``. Notice that nodes that need *expression-level arguments* are decorated with ``pipe_node_factory``. The ``plot`` node now takes a ``file_name`` argument, to be combined with the output directory set in the ``PipeNodeInput`` instance.
 
 .. code-block:: python
 
@@ -235,9 +228,9 @@ A number of functions used above as ``FunctionNode`` can be recast as ``PipeNode
     def percent(**kwargs):
         df = kwargs[fpn.PREDECESSOR_RETURN]
         post = pd.DataFrame(index=df.index)
-        sum = df.sum(axis=1)
+        total = df.sum(axis=1)
         for col in df.columns:
-            post[col] = df[col] / sum
+            post[col] = df[col] / total
         return post
 
     @fpn.pipe_node_factory
@@ -245,11 +238,11 @@ A number of functions used above as ``FunctionNode`` can be recast as ``PipeNode
         return kwargs[fpn.PREDECESSOR_RETURN].loc[start:end]
 
     @fpn.pipe_node_factory
-    def plot(file_name, title=None, **kwargs): # now we can pass a file name
+    def plot(file_name, **kwargs): # now we can pass a file name
         pni = kwargs[fpn.PN_INPUT]
         df = kwargs[fpn.PREDECESSOR_RETURN]
         fp = os.path.join(pni.output_dir, file_name)
-        ax = df.plot(title=title)
+        ax = df.plot()
         ax.get_figure().savefig(fp)
         return fp
 
@@ -258,7 +251,7 @@ A number of functions used above as ``FunctionNode`` can be recast as ``PipeNode
         webbrowser.open(kwargs[fpn.PREDECESSOR_RETURN])
 
 
-With these nodes defined, we can create many differnt processing PipeLines. For example, to plot two graphs, one each for the distribution of names that start with "lesl" and "dana", we can create the following expression. Notice that, for maximum efficiency, ``load_data_dict`` is called only once in the PipeNodeInput. Further, now that ``plot`` takes a file name argument, we can unqiuely name our plots.
+With these nodes defined, we can create many differnt processing pipelines. For example, to plot two graphs, one each for the distribution of names that start with "lesl" and "dana", we can create the following expression. Notice that, for maximum efficiency, ``load_data_dict`` is called only once in the ``PipeNodeInput``. Further, now that ``plot`` takes a file name argument, we can uniquely name our plots.
 
 .. code-block:: python
 
@@ -274,7 +267,7 @@ With these nodes defined, we can create many differnt processing PipeLines. For 
 .. image:: _static/usage_df_plot-dana-a.png
 
 
-To support graphing the gender distribution for multiple names simultaneously, we can create a specialized node to merge PipeNodes passed as key-word arguments. We can simply expect to merge DFs under all keys that are not part of ``fpn.PIPE_NODE_KWARGS``.
+To support graphing the gender distribution for multiple names simultaneously, we can create a specialized node to merge ``PipeNode`` expressions passed as key-word arguments. We can merge all ``DataFrame`` given with keys that are not part of the defined ``fpn.PIPE_NODE_KWARGS`` set.
 
 .. code-block:: python
 
@@ -289,7 +282,7 @@ To support graphing the gender distribution for multiple names simultaneously, w
         return df
 
 
-Now we can create two PipeNode expressions for each name we are investigating. These are then passed to ``merge_gender_data`` as key-word arguments. In all cases the raw data DataFrame is now retained with the ``store`` PipeNode. After plotting and viewing the plot, we can retrieve stored DataFrames by calling the ``store_items`` method of PipeNodeInput. Here, we load each DataFrame into a sheet of an Excel workbook outside of the PipeNode call. This could also be done as a PipeNode.
+Now we can create two expressions for each name we are investigating. These are then passed to ``merge_gender_data`` as key-word arguments. In all cases the raw data ``DataFrame`` is now retained with the ``store`` ``PipeNode``. After plotting and viewing, we can retrieve and iterate over stored keys and ``DataFrame`` by calling the ``store_items`` method of ``PipeNodeInput``. In this example, we load each ``DataFrame`` into a sheet of an Excel workbook.
 
 .. code-block:: python
 
@@ -318,7 +311,9 @@ Now we can create two PipeNode expressions for each name we are investigating. T
 .. image:: _static/usage_df_xlsx.png
 
 
-These examples demonstrate organizing data processing routines with PipeNodes. Using PipeNodeInput sublcasses, data acesss routines can be centralized and made as efficient as possible. Further, PipeNodeInput sublcasses can provide common parameters, such as ouput directories, to all nodes. Finally, stored data can be recalled within PipeNodes, or after PipeNode execution for wrting to disk.
+These examples demonstrate organizing data processing routines with ``PipeNode`` expressions. Using ``PipeNodeInput`` sublcasses, data acesss routines can be centralized and made as efficient as possible. Further, ``PipeNodeInput`` sublcasses can provide common parameters, such as output directories, to all nodes. Finally, the result of sub-expressions can stored and recalled within ``PipeNode`` expression, or after ``PipeNode`` execution for writing to disk.
+
+
 
 
 
