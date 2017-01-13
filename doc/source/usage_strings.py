@@ -153,11 +153,11 @@ def pn():
             self.chars = chars
 
     # we nee dot change our init function to read the chars attr
-    init = fpn.pipe_node(lambda **kwargs: kwargs[fpn.PN_INPUT].chars)
+    input_init = fpn.pipe_node(lambda **kwargs: kwargs[fpn.PN_INPUT].chars)
 
-    p = init | cat('www') | fpn.store('p')
-    q = init | cat('@@') | cat('__') * 2 | fpn.store('q')
-    r = init | a | cat(fpn.recall('p')) | cat('c') * 3 | interleave(fpn.recall('q'))
+    p = input_init | cat('www') | fpn.store('p')
+    q = input_init | cat('@@') | cat('__') * 2 | fpn.store('q')
+    r = input_init | a | cat(fpn.recall('p')) | cat('c') * 3 | interleave(fpn.recall('q'))
     f = fpn.call(p, q, r)
 
     pni = Input('x')
@@ -170,6 +170,6 @@ def pn():
 
 
 if __name__ == '__main__':
-    #fn()
+    fn()
     pn()
 

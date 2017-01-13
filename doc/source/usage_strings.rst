@@ -132,7 +132,7 @@ A function analogous to the above ``FunctionNode`` ``a``, now as a ``PipeNode``,
     def a(s):
         return s + 'a'
 
-The ``PipeNode`` decorators deliver the *initial input* to every PipeNode as the key-word argument ``fpn.PN_INPUT``. The *innermost* ``PipeNode`` in an expression does not have a predecessor, and this receives only the ``fpn.PN_INPUT`` key-word argument. All other PipeNodes receive all three key-word arguments, ``fpn.PREDECESSOR_RETURN``, ``fpn.PREDECESSOR_PN``, and ``fpn.PN_INPUT``.
+The ``PipeNode`` decorators deliver the *initial input* to every PipeNode as the key-word argument ``fpn.PN_INPUT``. The *innermost* ``PipeNode`` in an expression does not have a predecessor, and thus receives only the ``fpn.PN_INPUT`` key-word argument. All other PipeNodes receive all three key-word arguments, ``fpn.PREDECESSOR_RETURN``, ``fpn.PREDECESSOR_PN``, and ``fpn.PN_INPUT``.
 
 For this reason, the *innermost* PipeNode can only access ``fpn.PN_INPUT``. We can define an *innermost* function that simply passes on the *initial input*, ``fpn.PN_INPUT``, as follows:
 
@@ -196,9 +196,9 @@ As already shown, a callable decorated with ``pipe_node_factory`` can take *expr
     assert f['*'] == '+*a@b@c_+_a*b@c@+_a_b*c@'
 
 
-We can break ``PipeNode`` expressions into pieces by storing and recalling results. This requires that the *initial input* is a ``PipeNodeInput`` or a subclass. The following ``Input`` class exposes the ``__init__`` ``chars`` as an instance attribute. Alternative designs for ``PipeNodeInput`` subclasses can provide a range of input data preparation.
+We can break ``PipeNode`` expressions into pieces by storing and recalling results. This requires that the *initial input* is a ``PipeNodeInput`` or a subclass. The following ``Input`` class exposes the ``__init__`` based ``chars`` argument as an instance attribute. Alternative designs for ``PipeNodeInput`` subclasses can provide a range of input data preparation. Since our *initial input* has changed, we need a new *innermost* node. The ``input_init`` node defined below simply returns the ``chars`` attribute from the ``Input`` instance passed as key-word argument ``fpn.PN_INPUT``.
 
-The module-provided ``store`` and ``recall`` ``PipeNode`` can, respectively, store a predecessor value or provide a stored value as an output later in the expression. The ``recall`` ``PipeNode``, for example, can be used as an argument to ``pipe_node_factory`` functions. The ``call`` ``PipeNode``, also provided in the module, will call any number of passed ``PipeNode`` expressions in sequence.
+The function-pipe module provides ``store`` and ``recall`` nodes. The ``store`` node stores a predecessor value. The ``recall`` node returns a stored value as an output later in the expression. A ``recall`` node, for example, can be used as an argument to ``pipe_node_factory`` functions. The ``call`` ``PipeNode``, also provided in the function-pipe module, will call any number of passed ``PipeNode`` expressions in sequence.
 
 .. code-block:: python
 
@@ -208,14 +208,16 @@ The module-provided ``store`` and ``recall`` ``PipeNode`` can, respectively, sto
             self.chars = chars
 
     @fpn.pipe_node
-    def init(**kwargs):
+    def input_init(**kwargs):
         return kwargs[fpn.PN_INPUT].chars
 
-    p = init | cat('www') | fpn.store('p')
-    q = init | cat('@@') | cat('__') * 2 | fpn.store('q')
-    r = init | a | cat(fpn.recall('p')) | cat('c') * 3 | interleave(fpn.recall('q'))
+    p = input_init | cat('www') | fpn.store('p')
+    q = input_init | cat('@@') | cat('__') * 2 | fpn.store('q')
+    r = (input_init | a | cat(fpn.recall('p')) | cat('c') * 3
+            | interleave(fpn.recall('q')))
 
     f = fpn.call(p, q, r)
+    pni = Input('x')
 
     assert f[pni] == 'xxa@x@w_w_wxc@x@a_x_wxw@w@c_x_axx@w@w_w_cx'
 

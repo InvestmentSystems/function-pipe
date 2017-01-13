@@ -48,3 +48,20 @@ The function-pipe tools were developed within Investment Systems, the core devel
 
 
 
+Related
+--------
+
+The function-pipe tools, consisting of one module of less than 600 lines, offers a very focused and light-weight approach to extended function composition in Python. There are many other tools that offer similar and/or broader resources. A few are listed below.
+
+
+https://pypi.python.org/pypi/fn
+
+https://pypi.python.org/pypi/functional
+
+https://pypi.python.org/pypi/pipe
+
+https://pypi.python.org/pypi/pipetools
+
+https://pypi.python.org/pypi/PyFunctional
+
+https://pypi.python.org/pypi/PyMonad
