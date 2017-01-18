@@ -10,7 +10,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='function-pipe',
-    version='1.0.2',
+    version='1.0.3',
 
     description='Tools for extended function composition and pipelines',
     long_description=long_description,

@@ -107,9 +107,7 @@ class FunctionNode:
             *,
             doc_function=None,
             doc_args=None,
-            doc_kwargs=None,
-            call_state=None,
-            predecessor=None
+            doc_kwargs=None
             ):
         '''
         Args:
@@ -301,12 +299,12 @@ class FunctionNode:
     def __or__(lhs, rhs):
         '''Only implemented for PipeNode.
         '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __ror__(rhs, lhs):
         '''Only implemented for PipeNode.
         '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 #-------------------------------------------------------------------------------
@@ -358,7 +356,7 @@ class PipeNode(FunctionNode):
     def partial(*args, **kwargs):
         '''PipeNode calling is dictated by the PipeNode protocol; partial-like behavior in expressions shold be achived with functions decorated with the  pipe_node_factory decorator.
         '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     #---------------------------------------------------------------------------
     # pipe node properties
@@ -377,22 +375,22 @@ class PipeNode(FunctionNode):
     def __rshift__(lhs, rhs):
         '''Only implemented for FunctionNode.
         '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __rrshift__(rhs, lhs):
         '''Only implemented for FunctionNode.
         '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __lshift__(lhs, rhs):
         '''Only implemented for FunctionNode.
         '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __llshift__(rhs, lhs):
         '''Only implemented for FunctionNode.
         '''
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __or__(lhs, rhs):
         '''Call RHS with LHS as an argument; left is passed as kwarg PREDECESSOR_PN. This calls the RHS immediately and does not return an FN unless prepared as a PipeNode
