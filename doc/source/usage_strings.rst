@@ -1,7 +1,7 @@
 
 
-Usage with String Processing
-==================================
+String Processing with FunctionNode and PipeNode
+==================================================
 
 Simple examples of ``FunctionNode`` and ``PipeNode`` can be provided with string processing functions. While not serving any practical purpose, these examples demonstrate core features. Other usage examples will provide more practical demonstrations.
 

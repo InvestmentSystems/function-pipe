@@ -4,6 +4,13 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
+# https://packaging.python.org/distributing/
+# to deploy:
+# rm -r dist
+# python setup.py sdist
+# python setup.py bdist_wheel
+# twine upload dist/*
+
 here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()

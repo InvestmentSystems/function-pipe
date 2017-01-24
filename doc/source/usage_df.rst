@@ -1,7 +1,7 @@
 
 
-Usage with DataFrame Processing
-==================================
+DataFrame Processing with FunctionNode and PipeNode
+====================================================
 
 The ``FunctionNode`` and ``PipeNode`` were built in large part to handle data processing pipelines with Pandas ``Series`` and ``DataFrame``. The following examples do simple things with data, but provide a framework that can be expanded to meet a wide range of needs.
 

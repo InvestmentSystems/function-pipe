@@ -11,6 +11,7 @@ Contents:
    intro
    usage_strings
    usage_df
+   usage_np
 
 Indices and tables
 ==================
