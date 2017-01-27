@@ -31,7 +31,7 @@ This example will present a complete command-line program to print an equal-spac
 
 Rather than explicitly defining each character as a fixed bit map, we can use simple ``PipeNode`` functions to define characters as pipeline operations on Boolean NumPy arrays. Operations include creating an empty frame, drawing horizontal or vertical lines, shifting those lines, selectively inverting specific pixels, and taking the union or intersection of any number of frames. Since we want to model linear pipelining of frames through transformational nodes, but also need to expose a ``scale`` parameter to numerous nodes, we will use ``PipeNode`` functions and a ``PipeNodeInput`` instance rather than simple function composition.
 
-We will use the follow imports throughout these examples. The ``nympy`` third-party package is easily installed with ``pip``.
+We will use the follow imports throughout these examples. The ``numpy`` third-party package is easily installed with ``pip``.
 
 .. code-block:: python
 
@@ -225,7 +225,7 @@ http://www.dafont.com/visitor.font
     }
 
 
-We need a function to produce the final ``PipeNode`` expression. The ``msg_display_pipeline`` function, given a string message, will return the ``PipeNode`` expression combining ``concat`` and ``display``, where ``concat`` is called with PipeNode positional arguments, mapped from ``chars``, for each character passed in ``msg``. We map the '_' charater for any characters not defined in ``chars``.
+We need a function to produce the final ``PipeNode`` expression. The ``msg_display_pipeline`` function, given a string message, will return the ``PipeNode`` expression combining ``concat`` and ``display``, where ``concat`` is called with PipeNode positional arguments, mapped from ``chars``, for each character passed in ``msg``. We map the '_' character for any characters not defined in ``chars``.
 
 
 .. code-block:: python
