@@ -405,7 +405,7 @@ class PipeNode(FunctionNode):
     def __getitem__(self, pn_input):
         '''Call self with the passed PipeNodeInput.
         '''
-        pni = pn_input if pn_input else PipeNodeInput()
+        pni = pn_input if pn_input is None else PipeNodeInput()
         return self(**{PN_INPUT:pni})
 
 
