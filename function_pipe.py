@@ -318,6 +318,13 @@ PN_INPUT_SET = {PN_INPUT}
 PIPE_NODE_KWARGS = {PREDECESSOR_RETURN, PREDECESSOR_PN, PN_INPUT}
 
 
+def _enforce_predecessor_pn(predecessor_pn):
+    msg = f'{PREDECESSOR_PN} is not a node! This occurs when a `pipe_node_factory` was not initialized before the final pipeline call, or `pipe_node` was called before the final pipeline call.'
+    if not issubclass(type(predecessor_pn), FunctionNode):
+        raise RuntimeError(msg)
+
+
+
 class PipeNode(FunctionNode):
     '''The multi-call structure of PipeNodes moves a FunctionNode between three states.
     '''
@@ -491,10 +498,15 @@ def pipe_node_factory(core_callable,
                 # pack PipeNode protocol kwargs; when used as innermost, a core_callable can only expect to have a PN_INPUT
                 core_callable_kwargs[PN_INPUT] = e_kwargs[PN_INPUT]
 
+                predecessor_pn = core_callable_kwargs.get(PREDECESSOR_PN)
+                if predecessor_pn is not None:
+                    _enforce_predecessor_pn(predecessor_pn)
+
                 return decorated_core_callable(*core_callable_args,
                         **core_callable_kwargs)
 
             predecessor_pn = e_kwargs.get(PREDECESSOR_PN)
+            _enforce_predecessor_pn(predecessor_pn)
 
             def process_f(*p_args, **p_kwargs):
                 # call the predecssor PipeNode (here a process_f) with these processing args; these are always the args given as the initial input to the innermost function, generally a PipeNodeInput
