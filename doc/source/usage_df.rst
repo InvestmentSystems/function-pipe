@@ -123,6 +123,8 @@ With all functions decorated as ``FunctionNode``, we can create a composition ex
 
 .. code-block:: python
 
+    FP_ZIP = 'names.zip'
+
     f = (load_data_dict
         >> gender_count_per_year
         >> year_range.partial(start=1950, end=2000)
