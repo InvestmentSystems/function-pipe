@@ -12,6 +12,7 @@ Contents:
    usage_strings
    usage_df
    usage_np
+   pipeline_intuition_tutorial
 
 Indices and tables
 ==================

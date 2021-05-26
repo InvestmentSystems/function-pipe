@@ -29,6 +29,7 @@ We will use the follow imports throughout these examples. The ``requests`` and `
     import zipfile
     import collections
     import os
+    import webbrowser
 
     import requests
     import pandas as pd
@@ -40,6 +41,7 @@ We will introduce the ``FunctionNode``-decorated functions one at a time. We sta
 .. code-block:: python
 
     URL_NAMES = 'https://www.ssa.gov/oact/babynames/names.zip'
+    FP_ZIP = 'unzipped_names.txt'
 
     @fpn.FunctionNode
     def load_data_dict(fp):
