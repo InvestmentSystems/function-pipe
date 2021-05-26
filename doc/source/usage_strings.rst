@@ -121,14 +121,13 @@ Unlike with ``FunctionNode`` usage, the ``PipeNode`` class is rarely called dire
 
 The *PipeNode protocol* requires all *core callables* wrapped by ``PipeNode`` decorators to take at least ``**kwargs``; PipeNode key-word arguments ``fpn.PREDECESSOR_RETURN``, ``fpn.PREDECESSOR_PN``, and ``fpn.PN_INPUT`` are, as appropriate, passed as key-word arguments by the decorators to the *core callable*.
 
-A function analogous to the above ``FunctionNode`` ``a``, now as a ``PipeNode``, can be defined in a few different ways. The function can read ``fpn.PREDECESSOR_RETURN`` from the key-word arguments, or a positional-argument function can have ``PipeNode`` key-word arguments bound to positional arguments with the ``pipe_kwarg_bind`` decorator.
+A function analogous to the above ``FunctionNode`` ``a``, now as a ``PipeNode``, can be defined in a few different ways. The function can read ``fpn.PREDECESSOR_RETURN`` from the key-word arguments, or a positional-argument function can have ``PipeNode`` key-word arguments bound to positional arguments by optionall providing them to either the ``pipe_node`` or ``pipe_node_factory`` decorators.
 
 .. code-block:: python
 
     a = fpn.pipe_node(lambda **kwargs: kwargs[fpn.PREDECESSOR_RETURN] + 'a')
 
-    @fpn.pipe_node
-    @fpn.pipe_kwarg_bind(fpn.PREDECESSOR_RETURN)
+    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
     def a(s):
         return s + 'a'
 

@@ -185,33 +185,27 @@ def approach_composition():
 
 class PN1:
 
-    @fpn.pipe_node
-    @fpn.pipe_kwarg_bind(fpn.PN_INPUT)
+    @fpn.pipe_node(fpn.PN_INPUT)
     def load_data_dict(fp):
         return Core.load_data_dict(fp)
 
-    @fpn.pipe_node
-    @fpn.pipe_kwarg_bind(fpn.PREDECESSOR_RETURN)
+    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
     def gender_count_per_year(data_dict):
         return Core.gender_count_per_year(data_dict)
 
-    @fpn.pipe_node
-    @fpn.pipe_kwarg_bind(fpn.PREDECESSOR_RETURN)
+    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
     def percent(df):
         return Core.percent(df)
 
-    @fpn.pipe_node_factory
-    @fpn.pipe_kwarg_bind(fpn.PREDECESSOR_RETURN)
+    @fpn.pipe_node_factory(fpn.PREDECESSOR_RETURN)
     def year_range(df, start, end):
         return Core.year_range(df, start, end)
 
-    @fpn.pipe_node
-    @fpn.pipe_kwarg_bind(fpn.PREDECESSOR_RETURN)
+    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
     def plot(df):
         return Core.plot(df)
 
-    @fpn.pipe_node
-    @fpn.pipe_kwarg_bind(fpn.PREDECESSOR_RETURN)
+    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
     def open_plot(df):
         return Core.open_plot(df)
 
