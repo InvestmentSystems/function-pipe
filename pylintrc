@@ -12,9 +12,6 @@ unsafe-load-any-extension=y
 #unused-variable                          W0612
 #unused-argument                          W0613
 
-#no-member                                E1101: cannot get types of __getitem__
-#too-many-function-args                   E1121: incorrectly fails on numpy timedelta64 calls
-
 #Variable name                            C0103
 #Missing module docstring                 C0114
 #Missing class docstring                  C0115
@@ -27,8 +24,6 @@ unsafe-load-any-extension=y
 #len-as-condition                         C1801
 
 #unnecessary-comprehension                R1721
-
-#c-extension-no-member                    I1101: 'pyarrow.lib' has no 'ArrowNotImplementedError' member
 
 
 #-------------------------------------------------------------------------------
