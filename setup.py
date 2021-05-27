@@ -1,8 +1,9 @@
-# Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+from os import path
+
 # To use a consistent encoding
 from codecs import open
-from os import path
+# Always prefer setuptools over distutils
+from setuptools import setup
 
 # https://packaging.python.org/distributing/
 # to deploy:
@@ -17,7 +18,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='function-pipe',
-    version='1.1.0',
+    version='2.0.0',
 
     description='Tools for extended function composition and pipelines',
     long_description=long_description,
@@ -38,5 +39,4 @@ setup(
 
     keywords='functionnode pipenode composition pipeline pipe',
     py_modules=['function_pipe'], # no .py!
-
 )

@@ -10,9 +10,12 @@ import function_pipe as fpn
 '''
 import functools
 import inspect
-import types
-import sys
 import re
+import sys
+import types
+from enum import Enum
+
+import numpy as np
 
 
 #-------------------------------------------------------------------------------
@@ -114,7 +117,7 @@ def _repr(f) -> str:
     def get_function_name(f) -> str:
         '''Get a string representation of the callable, or its code if it is a lambda. In some cases, `f` may not be function, so just return a string.
         '''
-        if type(f) is not types.FunctionType or not hasattr(f, '__name__'):
+        if not isinstance(f, types.FunctionType) or not hasattr(f, '__name__'):
             return str(f)
         if f.__name__ == '<lambda>':
             # split on all white space, and rejoin with single space
@@ -129,8 +132,8 @@ def _repr(f) -> str:
         binary_op = _BINARY_OP_MAP.get(doc_f)
 
         if unary_op:
-            assert not f._doc_kwargs, f'Unary FunctionNodes must not have doc_kwargs.'
-            assert len(f._doc_args) == 1, f'Unary FunctionNodes must only have one doc_arg.'
+            assert not f._doc_kwargs, 'Unary FunctionNodes must not have doc_kwargs.'
+            assert len(f._doc_args) == 1, 'Unary FunctionNodes must only have one doc_arg.'
 
             if unary_op == 'abs':
                 arg = _repr(f._doc_args[0])
@@ -139,9 +142,9 @@ def _repr(f) -> str:
             arg = _format_expression(f._doc_args[0])
             return f'{unary_op}{arg}'
 
-        elif binary_op:
-            assert not f._doc_kwargs, f'Binary FunctionNodes must not have doc_kwargs.'
-            assert len(f._doc_args) == 2, f'Binary FunctionNodes must only have two doc_args.'
+        if binary_op:
+            assert not f._doc_kwargs, 'Binary FunctionNodes must not have doc_kwargs.'
+            assert len(f._doc_args) == 2, 'Binary FunctionNodes must only have two doc_args.'
 
             left = _format_expression(f._doc_args[0])
             right = _format_expression(f._doc_args[1])
@@ -151,7 +154,6 @@ def _repr(f) -> str:
         if not f._doc_args and not f._doc_kwargs:
             return doc_f
 
-        kwargs = ''
         predecessor = ''
         sig_str = '('
 
@@ -267,7 +269,6 @@ class FunctionNode:
     def __abs__(self):
         '''Absolute value; most common usage us on Numpy or Pandas objects, and thus here we np.abs.
         '''
-        from ISLib import np_raise as np
         return lambda *args, **kwargs: np.abs(self(*args, **kwargs))
 
     #---------------------------------------------------------------------------
@@ -409,10 +410,12 @@ PIPE_NODE_KWARGS = frozenset((PREDECESSOR_RETURN, PREDECESSOR_PN, PN_INPUT))
 
 class PipeNode(FunctionNode):
     '''The multi-call structure of PipeNodes moves a FunctionNode between three states.'''
-    # states
-    FACTORY = 'FACTORY'
-    EXPRESSION = 'EXPRESSION'
-    PROCESS = 'PROCESS'
+
+    class State(Enum):
+        '''The current state of the PipeNode'''
+        FACTORY = 'FACTORY'
+        EXPRESSION = 'EXPRESSION'
+        PROCESS = 'PROCESS'
 
     __slots__ = FunctionNode.__slots__ + (
             '_call_state',
@@ -434,16 +437,16 @@ class PipeNode(FunctionNode):
                 doc_args=doc_args,
                 doc_kwargs=doc_kwargs
                 )
-        self._call_state = call_state
+        self._call_state: self.State = call_state
         self._predecessor = predecessor
 
     def __str__(self):
-        if self._call_state is PipeNode.FACTORY:
+        if self._call_state is PipeNode.State.FACTORY:
             return f'<PNF: {_repr(self)}>'
         return f'<PN: {_repr(self)}>'
 
     def __repr__(self):
-        if self._call_state is PipeNode.FACTORY:
+        if self._call_state is PipeNode.State.FACTORY:
             return f'<PNF: {_repr(self)}>'
         return f'<PN: {_repr(self)}>'
 
@@ -456,11 +459,13 @@ class PipeNode(FunctionNode):
     # pipe node properties
 
     @property
-    def call_state(self):
+    def call_state(self) -> 'State':
+        '''The current call state of the Node'''
         return self._call_state
 
     @property
     def predecessor(self):
+        '''The Node preceeding this Node in a pipeline. Can be None'''
         return self._predecessor
 
     #---------------------------------------------------------------------------
@@ -507,7 +512,7 @@ class PipeNode(FunctionNode):
 
     def __call__(self, *args, **kwargs):
         '''Call the wrapped function.'''
-        if self._call_state is PipeNode.FACTORY:
+        if self._call_state is PipeNode.State.FACTORY:
             return self._function(*args, **kwargs)
         if args or set(kwargs) - PIPE_NODE_KWARGS != set():
             raise ValueError('Cannot call a PipeNode with args or non-pipeline kwargs! Please refer to the documentation for proper usage.')
@@ -564,7 +569,7 @@ def _is_unbound_self_method(core_callable):
     return bool(argspec.args and argspec.args[0] == 'self')
 
 
-class PipeNodeDescriptor:
+class PipeNodeDescriptor: # pylint: disable=too-few-public-methods
     '''
     Wraps up `pipe_node`/`pipe_node_factory` behavior in a descriptor, where it will bind instance and owner to the core_callable, and then pass it along the pipeline
     '''
@@ -621,7 +626,7 @@ def _pipe_kwarg_bind(*key_positions):
 def _descriptor_factory(*key_positions, decorator, core_decorator):
     has_key_positions = _has_key_positions(*key_positions)
 
-    class Descriptor:
+    class Descriptor: # pylint: disable=too-few-public-methods
         def __init__(self, func):
             self._func = func
 
@@ -686,7 +691,7 @@ def pipe_node_factory(*key_positions, core_decorator=core_logger):
                 e_args will only be used as an innermost call.
                 '''
                 kwargset = set(e_kwargs)
-                if kwargset != PN_INPUT_SET and kwargset != PREDECESSOR_PN_SET:
+                if kwargset not in (PN_INPUT_SET, PREDECESSOR_PN_SET):
                     raise ValueError(f'Expected to be called with either {PN_INPUT} or {PREDECESSOR_PN} only, not: {kwargset}')
 
                 # identify innermost condition as when the expression level kwargs consists only of PN_INPUT
@@ -729,18 +734,18 @@ def pipe_node_factory(*key_positions, core_decorator=core_logger):
                         doc_function=core_callable,
                         doc_args=f_args,
                         doc_kwargs={**e_kwargs, **f_kwargs},
-                        call_state=PipeNode.PROCESS,
+                        call_state=PipeNode.State.PROCESS,
                         predecessor=predecessor_pn,
                 )
             return PipeNode(expression_f,
                     doc_function=core_callable,
                     doc_args=f_args,
                     doc_kwargs=f_kwargs,
-                    call_state=PipeNode.EXPRESSION,
+                    call_state=PipeNode.State.EXPRESSION,
             )
 
         # return a function node so as to make doc_function available in test
-        return PipeNode(factory_f, doc_function=core_callable, call_state=PipeNode.FACTORY)
+        return PipeNode(factory_f, doc_function=core_callable, call_state=PipeNode.State.FACTORY)
 
     return _handle_descriptors_and_key_positions(*key_positions, core_handler=build_factory)
 

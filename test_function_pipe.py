@@ -1,10 +1,12 @@
-# pylint: disable=no-method-argument, no-self-argument, too-many-function-args, invalid-sequence-index, missing-kwoa
-
-import unittest
-import function_pipe as fpn
+# pylint: disable=no-method-argument, no-self-argument, too-many-function-args
+# pylint: disable=invalid-sequence-index, missing-kwoa, unsubscriptable-object
+# pylint: disable=no-value-for-parameter, invalid-unary-operand-type
+# pylint: disable=pointless-string-statement, pointless-statement
 import functools
 import types
+import unittest
 
+import function_pipe as fpn
 
 class TestUnit(unittest.TestCase):
     def test_basic_expressions_a(self):
@@ -158,11 +160,11 @@ class TestUnit(unittest.TestCase):
 
             @fpn.classmethod_pipe_node_factory
             def cls_node_factory(cls, factory_val, **kwargs):
-                return f'{cls.__name__} {factory_val=}'
+                return f"{cls.__name__} factory_val='{factory_val}'"
 
             @fpn.classmethod_pipe_node_factory(fpn.PN_INPUT)
             def cls_node_factory_bind(cls, pni, factory_val):
-                return pni, f'{cls.__name__} {factory_val=}'
+                return pni, f"{cls.__name__} factory_val='{factory_val}'"
 
             # staticmethods
 
@@ -176,11 +178,11 @@ class TestUnit(unittest.TestCase):
 
             @fpn.staticmethod_pipe_node_factory
             def staticmethod_node_factory(factory_val, **kwargs):
-                return f'STATIC {factory_val=}'
+                return f"STATIC factory_val='{factory_val}'"
 
             @fpn.staticmethod_pipe_node_factory(fpn.PN_INPUT)
             def staticmethod_node_factory_bind(pni, factory_val):
-                return pni, f'STATIC {factory_val=}'
+                return pni, f"STATIC factory_val='{factory_val}'"
 
             # namespace methods. These should fail if called from an instance.
 
@@ -194,11 +196,11 @@ class TestUnit(unittest.TestCase):
 
             @fpn.pipe_node_factory
             def namespace_node_factory(factory_val, **kwargs):
-                return f'NAMESPACE {factory_val=}'
+                return f"NAMESPACE factory_val='{factory_val}'"
 
             @fpn.pipe_node_factory(fpn.PN_INPUT)
             def namespace_node_factory_bind(pni, factory_val):
-                return pni, f'NAMESPACE {factory_val=}'
+                return pni, f"NAMESPACE factory_val='{factory_val}'"
 
             # self methods
 
@@ -212,11 +214,11 @@ class TestUnit(unittest.TestCase):
 
             @fpn.pipe_node_factory
             def self_node_factory(self, factory_val, **kwargs):
-                return f'SELF {factory_val=}'
+                return f"SELF factory_val='{factory_val}'"
 
             @fpn.pipe_node_factory(fpn.PN_INPUT)
             def self_node_factory_bind(self, pni, factory_val):
-                return pni, f'SELF {factory_val=}'
+                return pni, f"SELF factory_val='{factory_val}'"
 
         class D(C):
             STATE = 'D class state'
@@ -525,24 +527,24 @@ class TestUnit(unittest.TestCase):
         self.assertEqual('<PN: factory(1,2,kwarg=3) | factory(1,2,kwarg=3)>', str(factory(1, 2, kwarg=3) | factory(1, 2, kwarg=3)))
 
         @fpn.pipe_node()
-        def foo():
+        def pn1():
             pass
 
         @fpn.pipe_node()
-        def bar():
+        def pn2():
             pass
 
         @fpn.pipe_node_factory()
-        def baz(arg1, *arg_list, kwarg, **kwargs):
+        def pn3(arg1, *arg_list, kwarg, **kwargs):
             pass
 
         args = (1, 2, 3)
         kwargs = dict(kwarg=4, a=5, b=6)
 
-        self.assertEqual('<PN: foo+bar | baz(1,2,3,kwarg=4,a=5,b=6)>', repr((foo + bar) | baz(*args, **kwargs)))
-        self.assertEqual('<PN: foo | bar | baz(1,2,3,kwarg=4,a=5,b=6) | bar | foo>', repr(foo | bar | baz(*args, **kwargs) | bar | foo))
-        self.assertEqual('<PN: foo+bar | baz(1,2,3,kwarg=4,a=5,b=6)>', str((foo + bar) | baz(*args, **kwargs)))
-        self.assertEqual('<PN: foo | bar | baz(1,2,3,kwarg=4,a=5,b=6) | bar | foo>', str(foo | bar | baz(*args, **kwargs) | bar | foo))
+        self.assertEqual('<PN: pn1+pn2 | pn3(1,2,3,kwarg=4,a=5,b=6)>', repr((pn1 + pn2) | pn3(*args, **kwargs)))
+        self.assertEqual('<PN: pn1 | pn2 | pn3(1,2,3,kwarg=4,a=5,b=6) | pn2 | pn1>', repr(pn1 | pn2 | pn3(*args, **kwargs) | pn2 | pn1))
+        self.assertEqual('<PN: pn1+pn2 | pn3(1,2,3,kwarg=4,a=5,b=6)>', str((pn1 + pn2) | pn3(*args, **kwargs)))
+        self.assertEqual('<PN: pn1 | pn2 | pn3(1,2,3,kwarg=4,a=5,b=6) | pn2 | pn1>', str(pn1 | pn2 | pn3(*args, **kwargs) | pn2 | pn1))
 
     def test_repr_b(self):
         @fpn.pipe_node()
@@ -699,9 +701,9 @@ class TestUnit(unittest.TestCase):
         def pn():
             pass
 
-        self.assertEqual(fpn.PipeNode.PROCESS, (pn | factory()).call_state)
-        self.assertEqual(fpn.PipeNode.EXPRESSION, pn.call_state)
-        self.assertEqual(fpn.PipeNode.FACTORY, factory.call_state)
+        self.assertEqual(fpn.PipeNode.State.PROCESS, (pn | factory()).call_state)
+        self.assertEqual(fpn.PipeNode.State.EXPRESSION, pn.call_state)
+        self.assertEqual(fpn.PipeNode.State.FACTORY, factory.call_state)
 
     def test_predecessor_property(self):
         testable = {}
@@ -801,10 +803,10 @@ class TestUnit(unittest.TestCase):
             pn_b(1, 2, 3)
 
         with self.assertRaises(ValueError):
-            pn_a(kwarg=13)
+            pn_a(kwarg=13) # pylint: disable=unexpected-keyword-arg
 
         with self.assertRaises(ValueError):
-            pn_b(kwarg=13)
+            pn_b(kwarg=13) # pylint: disable=unexpected-keyword-arg
 
     def test_unwrapping(self):
         @fpn.pipe_node
