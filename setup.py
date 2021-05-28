@@ -24,7 +24,7 @@ setup(
     long_description=long_description,
 
     url='https://github.com/InvestmentSystems/function-pipe',
-    author='Christopher Ariza',
+    author='Christopher Ariza, Charles Burkland',
     license='MIT',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
