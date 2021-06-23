@@ -159,6 +159,7 @@ You can also observe that ``expr2`` reversed the order of the latter two PNs fro
 .. code:: python
 
    expr3 = (add_7 | mul_pni_by_2 | div_3)
+   expr3[12]
 
 it would have failed, since the first PN is *never* given ``fpn.PREDECESSOR_RETURN`` as a kwarg.
 
