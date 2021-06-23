@@ -362,7 +362,7 @@ Below is a class demonstrating usage of ``fpn.classmethod_pipe_node``, ``fpn.cla
       def operation_6(user_arg, *, user_kwarg, **kwargs):
          return (user_arg - user_kwarg) * kwargs[fpn.PN_INPUT].state
 
-      @fpn.pipe_node_factory(fpn.PN_INPUT)
+      @fpn.pipe_node(fpn.PN_INPUT)
       def operation_7(self, pni):
          return (self.state + pni.state) * 2
 
