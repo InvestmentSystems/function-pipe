@@ -88,8 +88,7 @@ def pn():
     a = fpn.pipe_node(lambda **kwargs: kwargs[fpn.PREDECESSOR_RETURN] + 'a')
 
     # another way of doing the same thing
-    @fpn.pipe_node
-    @fpn.pipe_kwarg_bind(fpn.PREDECESSOR_RETURN)
+    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
     def a(s):
         return s + 'a'
 

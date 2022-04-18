@@ -1,0 +1,7 @@
+*.diff
+*.orig
+*.pyc
+__pycache__/
+.vscode/
+doc/build/
+

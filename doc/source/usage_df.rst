@@ -29,6 +29,7 @@ We will use the follow imports throughout these examples. The ``requests`` and `
     import zipfile
     import collections
     import os
+    import webbrowser
 
     import requests
     import pandas as pd
@@ -40,6 +41,7 @@ We will introduce the ``FunctionNode``-decorated functions one at a time. We sta
 .. code-block:: python
 
     URL_NAMES = 'https://www.ssa.gov/oact/babynames/names.zip'
+    FP_ZIP = 'unzipped_names.txt'
 
     @fpn.FunctionNode
     def load_data_dict(fp):
@@ -158,7 +160,7 @@ While this approach is illustrative, it is limited. Using simple linear composit
 DataFrame Processing with PipeNode
 ---------------------------------------
 
-The *PipeNode protocol* requires that functions accept at least ``**kwargs``. Thus, it is common to strucutre ``PipeNode`` functions differently than functions for simple composition. However, with the ``pipe_kwarg_bind`` decorator, a generic function can be modified for usage as a ``PipeNode``. Note that the *core callable* stored in a ``PipeNode`` can be accessed with the ``unwrap`` property.
+The *PipeNode protocol* requires that functions accept at least ``**kwargs``. Thus, it is common to strucutre ``PipeNode`` functions differently than functions for simple composition. Note that the *core callable* stored in a ``PipeNode`` can be accessed with the ``unwrap`` property.
 
 While not required, creating a ``PipeNodeInput`` subclass to expose data necessary throughout a processing pipeline is a useful approach. This also provides a convenient place to store data loading routines and configuration values.
 
