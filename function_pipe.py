@@ -1,21 +1,19 @@
 """
 function_pipe.py
 
-Copyright 2012-2017 Research Affiliates
+Copyright 2012-2022 Research Affiliates
 
 Authors: Christopher Ariza, Max Moroz, Charles Burkland
 
 Common usage:
 import function_pipe as fpn
 """
+import enum
 import functools
 import inspect
 import re
 import sys
 import types
-from enum import Enum
-
-import numpy as np
 
 
 # -------------------------------------------------------------------------------
@@ -258,8 +256,13 @@ class FunctionNode:
 
     @_wrap_unary
     def __abs__(self):
-        """Absolute value; most common usage us on Numpy or Pandas objects, and thus here we np.abs."""
-        return lambda *args, **kwargs: np.abs(self(*args, **kwargs))
+        """Absolute value; Will use ``numpy.abs`` if available, as the most common usage is for Numpy or Pandas objects."""
+        try:
+            from numpy import abs as abs_func # Limit import overhead and dependencies
+        except ImportError:
+            abs_func = abs
+
+        return lambda *args, **kwargs: abs_func(self(*args, **kwargs))
 
     # ---------------------------------------------------------------------------
     # all binary operators return a function; the _wrap_binary decorator then wraps this function in a FunctionNode definition and supplies appropriate doc args. Note both left and righ sides are wrapped in FNs to permit operations on constants
@@ -398,7 +401,7 @@ PIPE_NODE_KWARGS = frozenset((PREDECESSOR_RETURN, PREDECESSOR_PN, PN_INPUT))
 class PipeNode(FunctionNode):
     """The multi-call structure of PipeNodes moves a FunctionNode between three states."""
 
-    class State(Enum):
+    class State(enum.Enum):
         """The current state of the PipeNode"""
 
         FACTORY = "FACTORY"

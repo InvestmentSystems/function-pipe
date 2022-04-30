@@ -9,10 +9,10 @@ Contents:
    :maxdepth: 2
 
    intro
+   pipeline_intuition_tutorial
    usage_strings
    usage_df
    usage_np
-   pipeline_intuition_tutorial
 
 Indices and tables
 ==================

@@ -17,8 +17,8 @@ class TestUnit(unittest.TestCase):
 
         @fpn.pipe_node
         def proc_a(**kwargs):
-            gmi = kwargs[fpn.PN_INPUT]
-            post = gmi.get_origin()
+            pni = kwargs[fpn.PN_INPUT]
+            post = pni.get_origin()
             return post
 
         @fpn.pipe_node_factory
@@ -45,31 +45,31 @@ class TestUnit(unittest.TestCase):
 
         f = a + b
 
-        gmi = TestInput()
+        pni = TestInput()
 
-        post = f(pn_input=gmi)
+        post = f(pn_input=pni)
         self.assertEqual(post, 960.0048)
 
-        post = a(pn_input=gmi)
+        post = a(pn_input=pni)
         self.assertEqual(post, 0.0048)
 
-        post = b(pn_input=gmi)
+        post = b(pn_input=pni)
         self.assertEqual(post, 960)
 
-        post = c(pn_input=gmi)
+        post = c(pn_input=pni)
         self.assertEqual(post, 30720)
 
-        post = d(pn_input=gmi)
+        post = d(pn_input=pni)
         self.assertEqual(post, -96)
 
         # proc a can reside in non first position
 
         f = proc_a | proc_a | proc_a
-        post = f(pn_input=gmi)
+        post = f(pn_input=pni)
         self.assertEqual(post, 32)
 
         f = proc_a | proc_a | proc_a
-        post = f(pn_input=gmi)
+        post = f(pn_input=pni)
         self.assertEqual(post, 32)
 
     def test_basic_expressions_b(self):
