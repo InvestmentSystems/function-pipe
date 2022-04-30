@@ -27,12 +27,13 @@ import sys, os
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-        'sphinx.ext.autodoc',
-        'sphinx.ext.viewcode',
-        'sphinx.ext.graphviz',
-        'sphinxcontrib.jinja',
+        "sphinx_copybutton",
+        # 'sphinx.ext.autodoc',
+        # 'sphinx.ext.viewcode',
+        # 'sphinx.ext.graphviz',
+        # 'sphinxcontrib.jinja',
         # 'matplotlib.sphinxext.only_directives',
-        'matplotlib.sphinxext.plot_directive',
+        # 'matplotlib.sphinxext.plot_directive',
         #'sphinx.ext.autosectionlabel',
         ]
 
@@ -259,3 +260,5 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+copybutton_selector = "div.copy-button pre"

@@ -44,7 +44,7 @@ https://github.com/InvestmentSystems/function-pipe
 History
 --------
 
-The function-pipe tools were developed within Investment Systems, the core development team of Research Affiliates, LLC. Many of the approaches implemented were first created by Max Moroz in 2012. Christopher Ariza subsequently refined and extended those approaches into the current models of FunctionNode and PipeNode. The first public release of function-pipe was in January 2017. After that, Charles Burkland fixed some outstanding bugs, improved the error messaging and user-friendliness of the library, and added some more explicit functions. The second public release was made in April 2022.
+The function-pipe tools were developed within Investment Systems, the core development team of Research Affiliates, LLC. Many of the approaches implemented were first created by Max Moroz in 2012. Christopher Ariza subsequently refined and extended those approaches into the current models of FunctionNode and PipeNode. The first public release of function-pipe was in January 2017. After that, Charles Burkland improved the quality and user-friendliness of the library, along with the addition of some more explicit functions. The second public release was made in April 2022.
 
 
 

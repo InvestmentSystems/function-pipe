@@ -1,22 +1,26 @@
 Intuitively Understanding Function Pipe Pipelines
 *************************************************
 
-This tutorial aims to teach the foundational concepts of ``function_pipe`` pipelines. Once these few foundational concepts are intuitively grasped, usage of the ``function_pipe`` module becomes very easy.
-
-Intro
-=====
-
 .. admonition:: Tutorial Alias
 
    PN: pipe node
 
-Simply, function pipelines happen in two stages: **creation** & **evaluation**.
+This tutorial will teach the foundational concepts of ``function_pipe`` PN pipelines through clear and intuitive steps. After reading, you will:
 
-**Creation** is the step in which a pipeline is defined, understood as either a single PN, or multiple PNs chained together using the ``|`` operator.
+      * Know how to build and use a PN and/or PN pipeline
+      * Understand the different between the **creation** and **evaluation** phase of PN
+      * Understand how to link PNs together
+      * Understand what a PN input is, and how to share data across PNs
+      * Be able to debug issues in your own PNs
+
+Intro
+=====
+
+Function pipelines happen in two stages: **creation** & **evaluation**.
+
+**Creation** is the step in which a pipeline is defined, understood as either a single PN, or multiple PNs chained together using the ``|`` operator. Here is a pseudo-code example of this:
 
 .. code:: python
-
-   import function_pipe as fpn # Import convention
 
    pipeline = (pn_a | pn_b | pn_c | ...)
 
@@ -28,7 +32,7 @@ Simply, function pipelines happen in two stages: **creation** & **evaluation**.
 
 .. code:: python
 
-   pipeline['initial input'] # Evaluate the pipeline by using __getitem__, and passing in some initial input
+   pipeline["initial input"] # Evaluate the pipeline by using __getitem__, and passing in some initial input
 
 Visualizing the Distinction Between Creation & Evaluation
 =========================================================
@@ -38,22 +42,25 @@ To get started, we will create two simple PNs, put them into a pipeline expressi
 To do this, we will use the ``fpn.pipe_node`` decorator, and define methods which take ``**kwargs``. (The necessity of which will be explained later)
 
 .. code:: python
+   :class: copy-button
+
+   import function_pipe as fpn  # Import convention!
 
    @fpn.pipe_node
    def pn1(**kwargs):
-      print('pn1 has been evaluated')
+      print("pn1 has been evaluated")
 
    @fpn.pipe_node
    def pn2(**kwargs):
-      print('pn2 has been evaluated')
+      print("pn2 has been evaluated")
 
-   print('Start creation')
+   print("Start creation")
    expr = (pn1 | pn2)
-   print('End creation')
+   print("End creation")
 
-   print('Start pipeline evaluation')
+   print("Start pipeline evaluation")
    expr[None]
-   print('End pipeline evaluation')
+   print("End pipeline evaluation")
 
 
 Now, let's see the output that happens were we to run the previous code.
@@ -80,6 +87,7 @@ In the previous example, we used ``**kwargs`` on each function (if we hadn't, th
 We will build up a slightly longer pipeline, and expand the nodes to return some values
 
 .. code:: python
+   :class: copy-button
 
    @fpn.pipe_node
    def pn1(**kwargs):
@@ -97,20 +105,21 @@ We will build up a slightly longer pipeline, and expand the nodes to return some
       return 3
 
    pipeline_expression = (pn1 | pn2 | pn3)
-   assert pipeline_expression['original_input'] == 3
+   assert pipeline_expression["original_input"] == 3
 
-   print(f'repr(pipeline_expression) = "{repr(pipeline_expression)}"')
+   print(f"repr(pipeline_expression) = "{repr(pipeline_expression)}"")
 
 Running the above code will produce the following output:
 
 .. code:: python
+   :class: copy-button
 
    | <function pn1 at 0x7f582cceb700>
-   {'pn_input': 'original_input'}
+   {"pn_input": "original_input"}
    | <function pn2 at 0x7f582c2d30d0>
-   {'pn_input': 'original_input', 'predecessor_pn': <PN: pn1>, 'predecessor_return': 1}
+   {"pn_input": "original_input", "predecessor_pn": <PN: pn1>, "predecessor_return": 1}
    | <function pn3 at 0x7f582c33b820>
-   {'pn_input': 'original_input', 'predecessor_pn': <PN: pn1 | pn2>, 'predecessor_return': 2}
+   {"pn_input": "original_input", "predecessor_pn": <PN: pn1 | pn2>, "predecessor_return": 2}
    repr(pipeline_expression) = "<PN: pn1 | pn2 | pn3>"
 
 There are a few things happening here worth observing.
@@ -133,6 +142,7 @@ Using the Kwargs
 Now that we know what will be passed in through each PN's ``**kwargs`` based on where it is in the pipeline, let's write some code that takes advantage of that.
 
 .. code:: python
+   :class: copy-button
 
    @fpn.pipe_node
    def mul_pni_by_2(**kwargs):
@@ -157,6 +167,7 @@ As you can see, PNs have the ability to use the return values from their predece
 You can also observe that ``expr2`` reversed the order of the latter two PNs from their order in ``expr1``. This worked seamlessly, since each of the PNs was accessing information from the predecessor's return value. Had we tried something like:
 
 .. code:: python
+   :class: copy-button
 
    expr3 = (add_7 | mul_pni_by_2 | div_3)
    expr3[12]
@@ -174,6 +185,7 @@ Now that we know how to use ``**kwargs``, it's likely obvious that manually extr
 Lucky for us, the ``fpn.pipe_node`` decorator can be optionally given the desired kwargs we want to positionally bind in the actual function signature.
 
 .. code:: python
+   :class: copy-button
 
    @fpn.pipe_node(fpn.PN_INPUT)
    def mul_pni_by_2(pni):
@@ -204,6 +216,7 @@ What About Other Arguments
 So far, we have most of the basics. However, there is one essential use case missing: how do I define additional arguments on my function? Let's say instead of a PN called ``add_7``, I have a PN called ``add``, that takes a number to add to the predecessor return value. Something like:
 
 .. code:: python
+   :class: copy-button
 
    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
    def add(prev_value, value_to_add):
@@ -221,6 +234,7 @@ Thankfully, such a mechanism exists: it's called ``fpn.pipe_node_factory``. This
 The previous example would work exactly as expected had we replaced the ``fpn.pipe_node`` decorator with the ``fpn.pipe_node_factory`` decorator!
 
 .. code:: python
+   :class: copy-button
 
    @fpn.pipe_node(fpn.PN_INPUT)
    def init(pni):
@@ -252,6 +266,7 @@ Up until now, the usage of ``pni`` (i.e. the arg conventionally bound to ``fpn.P
 Let's observe the following example, where we subclass ``fpn.PipeNodeInput`` in order to share some state accross PNs.
 
 .. code:: python
+   :class: copy-button
 
    class PNI(fpn.PipeNodeInput):
       def __init__(self, state):
@@ -278,6 +293,7 @@ Let's observe the following example, where we subclass ``fpn.PipeNodeInput`` in 
 This is also a good opportunity to highlight how pipeline expressions can be easily reused to provide different results when given different inital inputs. Using the above example, giving a different ``pni`` will give us a totally different result:
 
 .. code:: python
+   :class: copy-button
 
    pni_99 = PNI(99)
    assert expr[pni_99] == ((((99 * (99 * 2)) / 33)**99) - 16)
@@ -288,6 +304,7 @@ Store & Recall
 One of the main benefits to using a ``fpn.PipeNodeInput`` subclass, is the ability to use ``fpn.store`` and ``fpn.recall``. These utility methods will store & recall results from a cache internal to the pni.
 
 .. code:: python
+   :class: copy-button
 
    @fpn.pipe_node()
    def pn_12345():
@@ -303,13 +320,13 @@ One of the main benefits to using a ``fpn.PipeNodeInput`` subclass, is the abili
 
    pni = fpn.PipeNodeInput()
 
-   expr_1 = (pn_12345 | fpn.store('pn_a_results') | pn_double | fpn.store('pn_b_results'))
+   expr_1 = (pn_12345 | fpn.store("pn_a_results") | pn_double | fpn.store("pn_b_results"))
    expr_1[pni]
 
-   expr_2 = (fpn.recall('pn_a_results') | return_previous)
+   expr_2 = (fpn.recall("pn_a_results") | return_previous)
    assert expr_2[pni] == 12345
 
-   expr_3 = (fpn.recall('pn_b_results') | return_previous)
+   expr_3 = (fpn.recall("pn_b_results") | return_previous)
    assert expr_3[pni] == (12345 * 2)
 
 As you can see, once results have been stored using ``fpn.store``, they are retrievable using ``fpn.recall`` for any other pipeline **that is evaluated with that same pni**.
@@ -331,6 +348,7 @@ The final point in this tutorial are the tools needed for turning ``classmethods
 Below is a class demonstrating usage of ``fpn.classmethod_pipe_node``, ``fpn.classmethod_pipe_node_factory``, ``fpn.staticmethod_pipe_node`` and ``fpn.staticmethod_pipe_node_factory``.
 
 .. code:: python
+   :class: copy-button
 
    class Operations:
       STATE = 1
