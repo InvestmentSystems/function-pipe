@@ -39,7 +39,7 @@ Visualizing the Distinction Between Creation & Evaluation
 
 To get started, we will create two simple PNs, put them into a pipeline expression, and then evaluate that expression. **Creation** followed by **evaluation**.
 
-To do this, we will use the ``fpn.pipe_node`` decorator, and define methods which take ``**kwargs``. (The necessity of which will be explained later)
+To do this, we will use the ``fpn.pipe_node`` decorator, and define methods which take ``**kwargs``. (``**kwargs`` will be explained later!)
 
 .. code:: python
    :class: copy-button
@@ -47,19 +47,19 @@ To do this, we will use the ``fpn.pipe_node`` decorator, and define methods whic
    import function_pipe as fpn  # Import convention!
 
    @fpn.pipe_node
-   def pn1(**kwargs):
-      print("pn1 has been evaluated")
+   def pipe_node_1(**kwargs):
+      print("pipe_node_1 has been evaluated")
 
    @fpn.pipe_node
-   def pn2(**kwargs):
-      print("pn2 has been evaluated")
+   def pipe_node_2(**kwargs):
+      print("pipe_node_2 has been evaluated")
 
    print("Start creation")
-   expr = (pn1 | pn2)
+   pipeline = (pipe_node_1 | pipe_node_2)
    print("End creation")
 
    print("Start pipeline evaluation")
-   expr[None]
+   pipeline[None]
    print("End pipeline evaluation")
 
 
@@ -70,13 +70,13 @@ Now, let's see the output that happens were we to run the previous code.
    Start creation
    End creation
    Start pipeline evaluation
-   | <function pn1 at 0x7f582c428ca0>
-   pn1 has been evaluated
-   | <function pn2 at 0x7f582c428b80>
-   pn2 has been evaluated
+   | <function pipe_node_1 at 0x7f582c428ca0>
+   pipe_node_1 has been evaluated
+   | <function pipe_node_2 at 0x7f582c428b80>
+   pipe_node_2 has been evaluated
    End pipeline evaluation
 
-As you can see, none of the PNs are called (**evaluated**) until the pipeline expression itself is evaluated.
+As you can see, none of the PNs are called (**evaluated**) until the pipeline expression itself was **created** and then invoked.
 
 
 What Is The Deal With Kwargs
@@ -84,54 +84,53 @@ What Is The Deal With Kwargs
 
 In the previous example, we used ``**kwargs`` on each function (if we hadn't, the code would have failed!) Why did we need this, and what are they? Let's investigate!
 
-We will build up a slightly longer pipeline, and expand the nodes to return some values
+To investigate, we will build up a slightly longer pipeline, and expand the nodes to return some values
 
 .. code:: python
    :class: copy-button
 
    @fpn.pipe_node
-   def pn1(**kwargs):
+   def pipe_node_1(**kwargs):
       print(kwargs)
       return 1
 
    @fpn.pipe_node
-   def pn2(**kwargs):
+   def pipe_node_2(**kwargs):
       print(kwargs)
       return 2
 
    @fpn.pipe_node
-   def pn3(**kwargs):
+   def pipe_node_3(**kwargs):
       print(kwargs)
       return 3
 
-   pipeline_expression = (pn1 | pn2 | pn3)
-   assert pipeline_expression["original_input"] == 3
+   pipeline = (pipe_node_1 | pipe_node_2 | pipe_node_3)
+   assert pipeline["original_input"] == 3
 
-   print(f"repr(pipeline_expression) = "{repr(pipeline_expression)}"")
+   print(f"repr(pipeline) = "{repr(pipeline)}"")
 
 Running the above code will produce the following output:
 
 .. code:: python
-   :class: copy-button
 
-   | <function pn1 at 0x7f582cceb700>
+   | <function pipe_node_1 at 0x7f582cceb700>
    {"pn_input": "original_input"}
-   | <function pn2 at 0x7f582c2d30d0>
-   {"pn_input": "original_input", "predecessor_pn": <PN: pn1>, "predecessor_return": 1}
-   | <function pn3 at 0x7f582c33b820>
-   {"pn_input": "original_input", "predecessor_pn": <PN: pn1 | pn2>, "predecessor_return": 2}
-   repr(pipeline_expression) = "<PN: pn1 | pn2 | pn3>"
+   | <function pipe_node_2 at 0x7f582c2d30d0>
+   {"pn_input": "original_input", "predecessor_pn": <PN: pipe_node_1>, "predecessor_return": 1}
+   | <function pipe_node_3 at 0x7f582c33b820>
+   {"pn_input": "original_input", "predecessor_pn": <PN: pipe_node_1 | pipe_node_2>, "predecessor_return": 2}
+   repr(pipeline) = "<PN: pipe_node_1 | pipe_node_2 | pipe_node_3>"
 
 There are a few things happening here worth observing.
 
 1) Every node is given the kwarg ``pn_input``.
-2) Each node (except the first), are given the kwargs ``predecessor_pn`` and ``predecessor_return``
+2) Each node (except the first), is given the kwargs ``predecessor_pn`` and ``predecessor_return``
 
 The first node is special. In the context of the pipeline it lives in, there are no PNs preceding it, hence ``predecessor_pn`` and ``predecessor_return`` are not passed in!
 
 For every other node, it is initiutive what the values of ``predecessor_pn`` and ``predecessor_return`` will be. They contain the node instance of the one before, and the return value of that node once it's evaluated.
 
-As we can observe on ``pn3``, the repr of ``predecessor_pn`` shows how it's predecessor is actually a pipeline of PNs instead of a single PN. Additionally, printing the repr of ``expr`` shows how it is a pipeline of multiple PNs.
+As we can observe on ``pipe_node_3``, the repr of ``predecessor_pn`` shows how it's predecessor is actually a pipeline of PNs instead of a single PN. Additionally, printing the repr of ``pipeline`` shows how it is a pipeline of multiple PNs.
 
 .. note::
    From now on, we will refer to the three strings above by their symbolic constant handles in the **function_pipe** module. They are ``fpn.PN_INPUT``, ``fpn.PREDECESSOR_PN``, and ``fpn.PREDECESSOR_RETURN``, respectively.
@@ -145,7 +144,7 @@ Now that we know what will be passed in through each PN's ``**kwargs`` based on 
    :class: copy-button
 
    @fpn.pipe_node
-   def mul_pni_by_2(**kwargs):
+   def multiply_input_by_2(**kwargs):
       return kwargs[fpn.PN_INPUT] * 2
 
    @fpn.pipe_node
@@ -153,29 +152,29 @@ Now that we know what will be passed in through each PN's ``**kwargs`` based on 
       return kwargs[fpn.PREDECESSOR_RETURN] + 7
 
    @fpn.pipe_node
-   def div_3(**kwargs):
+   def divide_by_3(**kwargs):
       return kwargs[fpn.PREDECESSOR_RETURN] / 3
 
-   expr1 = (mul_pni_by_2 | add_7 | div_3)
-   assert expr1[12] == (((12 * 2) + 7) / 3)
+   pipeline_1 = (multiply_input_by_2 | add_7 | divide_by_3)
+   assert pipeline_1[12] == (((12 * 2) + 7) / 3)
 
-   expr2 = (mul_pni_by_2 | div_3 | add_7)
-   assert expr2[12] == (((12 * 2) / 3) + 7)
+   pipeline_2 = (multiply_input_by_2 | divide_by_3 | add_7)
+   assert pipeline_2[12] == (((12 * 2) / 3) + 7)
 
 As you can see, PNs have the ability to use the return values from their predecessors, or the ``fpn.PN_INPUT`` whenever they need to.
 
-You can also observe that ``expr2`` reversed the order of the latter two PNs from their order in ``expr1``. This worked seamlessly, since each of the PNs was accessing information from the predecessor's return value. Had we tried something like:
+You can also observe that ``pipeline_2`` reversed the order of the latter two PNs from their order in ``pipeline_1``. This worked seamlessly, since each of the PNs was accessing information from the predecessor's return value. Had we tried something like:
 
 .. code:: python
    :class: copy-button
 
-   expr3 = (add_7 | mul_pni_by_2 | div_3)
-   expr3[12]
+   pipeline_3 = (add_7 | multiply_input_by_2 | divide_by_3)
+   pipeline_3[12]
 
 it would have failed, since the first PN is *never* given ``fpn.PREDECESSOR_RETURN`` as a kwarg.
 
 .. note::
-   ``fpn.PREDECESSOR_PN`` is a kwarg that is almost never used in regular PNs or pipelines. If you are reaching for this kwarg, it's likely you are doing something wrong. It's primary (almost exclusive purpose), is to ensure the plumbing of the **function_pipe** module works properly, not for use by end users.
+   ``fpn.PREDECESSOR_PN`` is a kwarg that is almost never used in regular PNs or pipelines. If you are reaching for this kwarg, you are probably doing something wrong! It's primary purpose is to ensure the internals of the **function_pipe.PipeNode** module are working properly, not for use by end users.
 
 Hiding the Kwargs
 =================
@@ -188,7 +187,7 @@ Lucky for us, the ``fpn.pipe_node`` decorator can be optionally given the desire
    :class: copy-button
 
    @fpn.pipe_node(fpn.PN_INPUT)
-   def mul_pni_by_2(pni):
+   def multiply_input_by_2(pni):
       return pni * 2
 
    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
@@ -196,14 +195,14 @@ Lucky for us, the ``fpn.pipe_node`` decorator can be optionally given the desire
       return prev_val + 7
 
    @fpn.pipe_node(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
-   def div_3_add_pni(pni, prev_val):
+   def divide_by_3_add_pni(pni, prev_val):
       return (prev_val / 3) + pni
 
    @fpn.pipe_node()
    def nothing_is_bound():
       pass
 
-   expr = (nothing_is_bound | mul_pni_by_2 | add_7 | div_3_add_pni)
+   expr = (nothing_is_bound | multiply_input_by_2 | add_7 | divide_by_3_add_pni)
    assert expr[12] == ((((12 * 2) + 7) / 3) + 12)
 
 Ah. That's much better. It clears up the function signature, and makes it clear what each PN function needs in order to process properly.
@@ -459,7 +458,7 @@ Example:
       return (sum(args) / divide_by)**to_power
 
    @fpn.pipe_node(fpn.PN_INPUT)
-   def mul_pni_by_2(pni):
+   def multiply_input_by_2(pni):
       return pni * 2
 
    @fpn.pipe_node(fpn.PN_INPUT)
@@ -470,7 +469,7 @@ Example:
    def forward_pni(pni):
       return pni
 
-   expr = add_div_pow(mul_pni_by_2, -4, forward_pni, divide_by=25, to_power=add_3_to_pni)
+   expr = add_div_pow(multiply_input_by_2, -4, forward_pni, divide_by=25, to_power=add_3_to_pni)
 
    assert expr[12] == ((12*2-4+12)/25)**(12+3)
 

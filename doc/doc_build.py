@@ -15,5 +15,5 @@ if __name__ == '__main__':
             build_dir]
     status = main(args)
 
-    import webbrowser
-    webbrowser.open(os.path.join(build_dir, 'index.html'))
+    #import webbrowser
+    #webbrowser.open(os.path.join(build_dir, 'index.html'))
