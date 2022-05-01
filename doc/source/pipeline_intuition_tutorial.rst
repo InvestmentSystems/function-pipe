@@ -330,7 +330,7 @@ Let's observe the following example, where we subclass ``fpn.PipeNodeInput`` in 
       return (previous_value ** pni.state) -16
 
    pipeline = (pipe_node_1 | pipe_node_2 | pipe_node_3)
-   assert pipeline[pni_12] == ((((12 * (12 * 2)) / 33)**12) - 16)
+   assert pipeline[pni_12] == ((((12 * (12 * 2)) / 33) ** 12) - 16)
 
 This is also a good opportunity to highlight how pipeline expressions can be easily reused to provide different results when given different inital inputs. Using the above example, giving a different ``pni`` will give us a totally different result:
 
@@ -338,7 +338,7 @@ This is also a good opportunity to highlight how pipeline expressions can be eas
    :class: copy-button
 
    pni_99 = PNI(99)
-   assert pipeline[pni_99] == ((((99 * (99 * 2)) / 33)**99) - 16)
+   assert pipeline[pni_99] == ((((99 * (99 * 2)) / 33) ** 99) - 16)
    assert pipeline[pni_99] != pipeline[pni_12]
 
 Store & Recall
@@ -644,12 +644,12 @@ Here is all of the code examples we have seen so far:
       return (previous_value ** pni.state) -16
 
    pipeline = (pipe_node_1 | pipe_node_2 | pipe_node_3)
-   assert pipeline[pni_12] == ((((12 * (12 * 2)) / 33)**12) - 16)
+   assert pipeline[pni_12] == ((((12 * (12 * 2)) / 33) ** 12) - 16)
 
    # Example 9:
 
    pni_99 = PNI(99)
-   assert pipeline[pni_99] == ((((99 * (99 * 2)) / 33)**99) - 16)
+   assert pipeline[pni_99] == ((((99 * (99 * 2)) / 33) ** 99) - 16)
    assert pipeline[pni_99] != pipeline[pni_12]
 
    # Example 10:
@@ -768,24 +768,25 @@ Obviously, this approach is not very pretty, and it's quite a lot to type for th
 Common Mistakes
 ---------------
 
-1. Placing a bare factory in pipeline.
+1. Placing a bare factory in pipeline (see: A Common Factory Mistake).
 2. Calling a PN directly (with the exception of unpacking the single kwarg ``fpn.PN_INPUT``).
 3. Partialing a method wrapped with ``fpn.pipe_node`` or ``fpn.pipe_node_factory``.
-4. Using ``@classmethod`` or ``@staticmethod`` decorators instead of the special **function_pipe** tools designed for working with classmethods/staticmethods.
+4. Using ``@classmethod`` or ``@staticmethod`` decorators instead of the special decorators designed for working with classmethods/staticmethods.
 5. Decorating a function with ``fpn.pipe_node`` whose signature expects args/kwargs outside either those bound from the pipeline, or ``**kwargs``.
 
 Broadcasting
 ------------
 
-A feature of ``fpn.pipe_node_factory`` is how it handles args/kwargs that themselves are PNs. For these types of arguments, it will evaluate them with ``fpn.PN_INPUT`` (i.e. evaluate them as solo PNs), and then pass in evaluated value in place of a PN. (This is referred to as broadcasting).
+A feature of ``fpn.pipe_node_factory`` is how it handles args/kwargs that are themselves PNs. For these types of arguments, it will evaluate them as isolated PNs with ``fpn.PN_INPUT`` forwarded, and then use the evaluated value in place of that PN. (This is referred to as broadcasting).
 
 Example:
 
-.. code::
+.. code:: python
+   :class: copy-button
 
    @fpn.pipe_node_factory()
-   def add_div_pow(*args, divide_by, to_power):
-      return (sum(args) / divide_by)**to_power
+   def add_divide_exponentiate(*args, divide_by, to_power):
+      return (sum(args) / divide_by) ** to_power
 
    @fpn.pipe_node(fpn.PN_INPUT)
    def multiply_input_by_2(pni):
@@ -799,9 +800,9 @@ Example:
    def forward_pni(pni):
       return pni
 
-   expr = add_div_pow(multiply_input_by_2, -4, forward_pni, divide_by=25, to_power=add_3_to_pni)
+   pipeline = add_divide_exponentiate(multiply_input_by_2, -4, forward_pni, divide_by=25, to_power=add_3_to_pni)
 
-   assert expr[12] == ((12*2-4+12)/25)**(12+3)
+   assert pipeline[12] == ((12 * 2 - 4 + 12) / 25) ** (12 + 3)
 
 As we can see, when factories are given PNs as args/kwargs, they are evaluated with the ``fpn.PN_INPUT`` given to the original PN/expression being evaluated.
 
