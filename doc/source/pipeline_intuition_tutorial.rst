@@ -301,9 +301,9 @@ Up until now, the usage of ``pni`` (i.e. the argument conventionally bound to ``
 
 ``fpn.PipeNodeInput`` is a subclassable object, which has the ability to:
 
-1. Store results from previous PNs
-2. Recall values from previous PNs
-3. Share state across PNs.
+   1. Store results from previous PNs
+   2. Recall values from previous PNs
+   3. Share state across PNs.
 
 Let's observe the following example, where we subclass ``fpn.PipeNodeInput`` in order to share some state accross PNs.
 
@@ -383,12 +383,12 @@ Additionally, you can see that ``fpn.store`` and ``fpn.recall`` simply forward a
 Advanced - Instance/Class/Static Methods
 ========================================
 
-The final point in this tutorial are the tools needed for turning ``classmethods`` and ``staticmethods`` into PNs. To do this, we can take advantage of special classmethod/staticmethod tools built into the **function_pipe** library!
+The final section in this tutorial explains the tools needed for turning ``classmethods`` and ``staticmethods`` into PNs. To do this, we can take advantage of special classmethod/staticmethod tools built into the **function_pipe** library!
 
 .. note::
-   Normal "instance" methods (i.e. functions that expect self (i.e. the instance) passed in as the first argument) work exactly as expected with the ``fpn.pipe_node`` and ``fpn.pipe_node_factory`` decorators.
+   Normal "instance" methods (i.e. functions that expect self (i.e. the instance) passed in as the first argument) work exactly as expected with the ``fpn.pipe_node`` and ``fpn.pipe_node_factory`` decorators, as long as the name of the argument is "self".
 
-Below is a class demonstrating usage of ``fpn.classmethod_pipe_node``, ``fpn.classmethod_pipe_node_factory``, ``fpn.staticmethod_pipe_node`` and ``fpn.staticmethod_pipe_node_factory``.
+Building on everything we've seen so far, let's take a look at the class below, which demonstrates usage of ``fpn.classmethod_pipe_node``, ``fpn.classmethod_pipe_node_factory``, ``fpn.staticmethod_pipe_node`` and ``fpn.staticmethod_pipe_node_factory``.
 
 .. code:: python
    :class: copy-button
@@ -401,6 +401,7 @@ Below is a class demonstrating usage of ``fpn.classmethod_pipe_node``, ``fpn.cla
 
       @fpn.pipe_node
       def operation_1(self, **kwargs):
+         # This works as expected, since the first argument is "self"
          return self.state + kwargs[fpn.PN_INPUT].state
 
       @fpn.classmethod_pipe_node
@@ -428,12 +429,12 @@ Below is a class demonstrating usage of ``fpn.classmethod_pipe_node``, ``fpn.cla
          return (self.state + pni.state) * 2
 
       @fpn.classmethod_pipe_node_factory(fpn.PREDECESSOR_RETURN)
-      def operation_8(cls, prev_val, user_arg, *, user_kwarg):
-         return (cls.STATE + user_arg - user_kwarg) * prev_val
+      def operation_8(cls, previous_value, user_arg, *, user_kwarg):
+         return (cls.STATE + user_arg - user_kwarg) * previous_value
 
       @fpn.staticmethod_pipe_node(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
-      def operation_9(pni, prev_val):
-         return (pni.state - prev_val) ** 2
+      def operation_9(pni, previous_value):
+         return (pni.state - previous_value) ** 2
 
    class PNI(fpn.PipeNodeInput):
       def __init__(self, state):
@@ -459,6 +460,291 @@ Below is a class demonstrating usage of ``fpn.classmethod_pipe_node``, ``fpn.cla
 
    assert pipeline[pni] == 9801 # Good luck figuring that one out ;)
 
+To help explain the decorators a bit more, here is a quick pseudo-code example showing an alternative way to understand them:
+
+.. code:: python
+
+   @fpn.classmethod_pipe_node
+
+   # Behaves like you think this would:
+
+   @classmethod
+   @fpn.pipe_node
+
+   # ------------------------------------------------------------
+
+   @fpn.staticmethod_pipe_node_factory
+
+   # Behaves like you think this would:
+
+   @staticmethod
+   @fpn.pipe_node_factory
+
+   # etc...
+
+Conclusion
+==========
+
+After going through this tutorial, you should now have an understanding of:
+
+   - The **creation** and **evaluation** stages of a pipeline
+   - The ``fpn.pipe_node`` decorator, and when to use it
+   - The ``fpn.pipe_node_factory`` decorator, and when to use it
+   - How to positionally bind the first argument(s) of a pipeline to ``fpn.PN_INPUT`` and/or ``fpn.PREDECESSOR_RETURN``.
+   - How to use ``fpn.store`` and ``fpn.recall`` to store and recall results from a pipeline.
+   - How to use ``fpn.PipeNodeInput``.
+   - How to make instance methods, classmethods, and staticmethods into PNs.
+
+Here is all of the code examples we have seen so far:
+
+.. code:: python
+   :class: copy-button
+
+   # Example 1:
+
+   import function_pipe as fpn  # Import convention!
+
+   @fpn.pipe_node
+   def pipe_node_1(**kwargs):
+      print("pipe_node_1 has been evaluated")
+
+   @fpn.pipe_node
+   def pipe_node_2(**kwargs):
+      print("pipe_node_2 has been evaluated")
+
+   print("Start creation")
+   pipeline = (pipe_node_1 | pipe_node_2)
+   print("End creation")
+
+   print("Start pipeline evaluation")
+   pipeline[None]
+   print("End pipeline evaluation")
+
+   # Example 2:
+
+   @fpn.pipe_node
+   def pipe_node_1(**kwargs):
+      print(kwargs)
+      return 1
+
+   @fpn.pipe_node
+   def pipe_node_2(**kwargs):
+      print(kwargs)
+      return 2
+
+   @fpn.pipe_node
+   def pipe_node_3(**kwargs):
+      print(kwargs)
+      return 3
+
+   pipeline = (pipe_node_1 | pipe_node_2 | pipe_node_3)
+   assert pipeline["original_input"] == 3
+
+   print(f"repr(pipeline) = "{repr(pipeline)}"")
+
+   # Example 3:
+
+   @fpn.pipe_node
+   def multiply_input_by_2(**kwargs):
+      return kwargs[fpn.PN_INPUT] * 2
+
+   @fpn.pipe_node
+   def add_7(**kwargs):
+      return kwargs[fpn.PREDECESSOR_RETURN] + 7
+
+   @fpn.pipe_node
+   def divide_by_3(**kwargs):
+      return kwargs[fpn.PREDECESSOR_RETURN] / 3
+
+   pipeline_1 = (multiply_input_by_2 | add_7 | divide_by_3)
+   assert pipeline_1[12] == (((12 * 2) + 7) / 3)
+
+   pipeline_2 = (multiply_input_by_2 | divide_by_3 | add_7)
+   assert pipeline_2[12] == (((12 * 2) / 3) + 7)
+
+   # Example 4:
+
+   pipeline_3 = (add_7 | multiply_input_by_2 | divide_by_3)
+   pipeline_3[12]
+
+   # Example 5:
+
+   # Bind the first positional argument
+   @fpn.pipe_node(fpn.PN_INPUT)
+   def multiply_input_by_2(pn_input):
+      return pn_input * 2
+
+   # Bind the first positional argument
+   @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
+   def add_7(previous_value):
+      return previous_value + 7
+
+   # Bind the first and second positional arguments
+   @fpn.pipe_node(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
+   def divide_by_3_add_pn_input(pn_input, previous_value):
+      return (previous_value / 3) + pn_input
+
+   @fpn.pipe_node() # Bind no arguments
+   def nothing_is_bound():
+      pass
+
+   pipeline = (
+      nothing_is_bound
+      | multiply_input_by_2
+      | add_7
+      | divide_by_3_add_pn_input
+   )
+   assert pipeline[12] == ((((12 * 2) + 7) / 3) + 12)
+
+   # Example 6:
+
+   @fpn.pipe_node(fpn.PN_INPUT)
+   def init(pn_input):
+      return pn_input
+
+   @fpn.pipe_node_factory(fpn.PREDECESSOR_RETURN)
+   def add(previous_value, value_to_add):
+      return previous_value + value_to_add
+
+   pipeline = (init | add(3) | add(4.2) | add(-2003))
+   assert pipeline[0] == (0 + 3 + 4.2 + -2003)
+
+   # Example 7:
+
+   @fpn.pipe_node(fpn.PN_INPUT)
+   def init(pn_input):
+      return pn_input
+
+   @fpn.pipe_node_factory(fpn.PREDECESSOR_RETURN)
+   def add(previous_value, value_to_add):
+      return previous_value + value_to_add
+
+   # Uh-oh! One of the `add` pn factories was not given its required argument!
+   pipeline = (init | add(3) | add(4.2) | add)
+
+   # Example 8:
+
+   class PNI(fpn.PipeNodeInput):
+      def __init__(self, state):
+         super().__init__()
+         self.state = state
+
+   pni_12 = PNI(12)
+
+   @fpn.pipe_node(fpn.PN_INPUT)
+   def pipe_node_1(pni):
+      return pni.state * 2
+
+   @fpn.pipe_node(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
+   def pipe_node_2(pni, previous_value):
+      return (pni.state * previous_value) / 33
+
+   @fpn.pipe_node(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
+   def pipe_node_3(pni, previous_value):
+      return (previous_value ** pni.state) -16
+
+   pipeline = (pipe_node_1 | pipe_node_2 | pipe_node_3)
+   assert pipeline[pni_12] == ((((12 * (12 * 2)) / 33)**12) - 16)
+
+   # Example 9:
+
+   pni_99 = PNI(99)
+   assert pipeline[pni_99] == ((((99 * (99 * 2)) / 33)**99) - 16)
+   assert pipeline[pni_99] != pipeline[pni_12]
+
+   # Example 10:
+
+   @fpn.pipe_node()
+   def returns_12345():
+      return 12345
+
+   @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
+   def double_previous(previous_value):
+      return previous_value * 2
+
+   @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
+   def return_previous(previous_value):
+      return previous_value
+
+   pni = fpn.PipeNodeInput()
+
+   pipeline_1 = (returns_12345 | fpn.store("first_result") | double_previous | fpn.store("second_result"))
+   pipeline_1[pni]
+
+   pipeline_2 = (fpn.recall("first_result") | return_previous)
+   assert pipeline_2[pni] == 12345
+
+   pipeline_3 = (fpn.recall("second_result") | return_previous)
+   assert pipeline_3[pni] == (12345 * 2)
+
+   # Example 11:
+
+   class Operations:
+      STATE = 1
+
+      def __init__(self, state):
+         self.state = state
+
+      @fpn.pipe_node
+      def operation_1(self, **kwargs):
+         # This works as expected, since the first argument is "self"
+         return self.state + kwargs[fpn.PN_INPUT].state
+
+      @fpn.classmethod_pipe_node
+      def operation_2(cls, **kwargs):
+         return cls.STATE + kwargs[fpn.PN_INPUT].state
+
+      @fpn.staticmethod_pipe_node
+      def operation_3(**kwargs):
+         return kwargs[fpn.PN_INPUT].state
+
+      @fpn.pipe_node_factory
+      def operation_4(self, user_arg, *, user_kwarg, **kwargs):
+         return (self.state + user_arg - user_kwarg) * kwargs[fpn.PN_INPUT].state
+
+      @fpn.classmethod_pipe_node_factory
+      def operation_5(cls, user_arg, *, user_kwarg, **kwargs):
+         return (cls.STATE + user_arg - user_kwarg) * kwargs[fpn.PN_INPUT].state
+
+      @fpn.staticmethod_pipe_node_factory
+      def operation_6(user_arg, *, user_kwarg, **kwargs):
+         return (user_arg - user_kwarg) * kwargs[fpn.PN_INPUT].state
+
+      @fpn.pipe_node(fpn.PN_INPUT)
+      def operation_7(self, pni):
+         return (self.state + pni.state) * 2
+
+      @fpn.classmethod_pipe_node_factory(fpn.PREDECESSOR_RETURN)
+      def operation_8(cls, previous_value, user_arg, *, user_kwarg):
+         return (cls.STATE + user_arg - user_kwarg) * previous_value
+
+      @fpn.staticmethod_pipe_node(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
+      def operation_9(pni, previous_value):
+         return (pni.state - previous_value) ** 2
+
+   class PNI(fpn.PipeNodeInput):
+      def __init__(self, state):
+         super().__init__()
+         self.state = state
+
+   pni = PNI(-99)
+
+   op = Operations(2)
+
+   pipeline = (
+         # The first three are PNs!
+         op.operation_1 | op.operation_2 | op.operation_3 |
+         # The second three are PN factories!
+         op.operation_4(10, user_kwarg=11) |
+         op.operation_5(12, user_kwarg=13) |
+         op.operation_6(14, user_kwarg=15) |
+         # The rest are PNs (except `operation_8`)
+         op.operation_7 |
+         op.operation_8(16, user_kwarg=17) |
+         op.operation_9
+   )
+
+   assert pipeline[pni] == 9801 # Good luck figuring that one out ;)
 
 Miscellaneous
 =============
@@ -470,9 +756,9 @@ For this entire tutorial, PNs and pipeline expressions have been evaluated using
 
 Thus, we can actually evaluate a PN/pipeline expression this way:
 
-.. code::
+.. code:: python
 
-   pn(**{fpn.PN_INPUT: pni})
+   some_pipe_node(**{fpn.PN_INPUT: pni})
 
 Obviously, this approach is not very pretty, and it's quite a lot to type for the privilege of evaluation. Thus, the ``__getitem__`` syntactical sugar was introduced to make it so the user isn't required to unpack a single kwarg whenever they want to evaluate a pipeline.
 
