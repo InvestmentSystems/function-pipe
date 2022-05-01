@@ -297,9 +297,13 @@ PN Input (pni)
 
    pni: pn_input (argument conventionally bound to ``fpn.PN_INPUT``)
 
-Up until now, the usage of ``pni`` (i.e. the argument conventionally bound to ``fpn.PN_INPUT``) has been a relatively diverse. This is because ``fpn.PN_INPUT`` refers to the initial input to the pipeline, and as such, can be any value. For these simple examples, I have been providing integers, but real-world cases typically rely on the standard ``fpn.PipeNodeInput`` class.
+Up until now, the usage of ``pni`` (i.e. the argument conventionally bound to ``fpn.PN_INPUT``) has been a relatively diverse. This is because ``fpn.PN_INPUT`` refers to the initial input to the pipeline, and as such, can be any value. For these simple examples, I have been providing integers, but real-world cases typically rely on the ``fpn.PipeNodeInput`` class.
 
-``fpn.PipeNodeInput`` is a subclassable object, which has the ability to store results from previous PNs, recall values from previous PNs, and share state across PNs.
+``fpn.PipeNodeInput`` is a subclassable object, which has the ability to:
+
+1. Store results from previous PNs
+2. Recall values from previous PNs
+3. Share state across PNs.
 
 Let's observe the following example, where we subclass ``fpn.PipeNodeInput`` in order to share some state accross PNs.
 
@@ -314,19 +318,19 @@ Let's observe the following example, where we subclass ``fpn.PipeNodeInput`` in 
    pni_12 = PNI(12)
 
    @fpn.pipe_node(fpn.PN_INPUT)
-   def pn_1(pni):
+   def pipe_node_1(pni):
       return pni.state * 2
 
    @fpn.pipe_node(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
-   def pn_2(pni, prev):
-      return (pni.state * prev) / 33
+   def pipe_node_2(pni, previous_value):
+      return (pni.state * previous_value) / 33
 
    @fpn.pipe_node(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
-   def pn_3(pni, prev):
-      return (prev**pni.state) -16
+   def pipe_node_3(pni, previous_value):
+      return (previous_value ** pni.state) -16
 
-   expr = (pn_1 | pn_2 | pn_3)
-   assert expr[pni_12] == ((((12 * (12 * 2)) / 33)**12) - 16)
+   pipeline = (pipe_node_1 | pipe_node_2 | pipe_node_3)
+   assert pipeline[pni_12] == ((((12 * (12 * 2)) / 33)**12) - 16)
 
 This is also a good opportunity to highlight how pipeline expressions can be easily reused to provide different results when given different inital inputs. Using the above example, giving a different ``pni`` will give us a totally different result:
 
@@ -334,42 +338,43 @@ This is also a good opportunity to highlight how pipeline expressions can be eas
    :class: copy-button
 
    pni_99 = PNI(99)
-   assert expr[pni_99] == ((((99 * (99 * 2)) / 33)**99) - 16)
+   assert pipeline[pni_99] == ((((99 * (99 * 2)) / 33)**99) - 16)
+   assert pipeline[pni_99] != pipeline[pni_12]
 
 Store & Recall
 ==============
 
-One of the main benefits to using a ``fpn.PipeNodeInput`` subclass, is the ability to use ``fpn.store`` and ``fpn.recall``. These utility methods will store & recall results from a cache internal to the pni.
+One of the main benefits to using a ``fpn.PipeNodeInput`` subclass, is the ability to use ``fpn.store`` and ``fpn.recall``. These utility methods will store & recall results from a cache privately stored on the ``pni``.
 
 .. code:: python
    :class: copy-button
 
    @fpn.pipe_node()
-   def pn_12345():
+   def returns_12345():
       return 12345
 
    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
-   def pn_double(prev):
-      return prev * 2
+   def double_previous(previous_value):
+      return previous_value * 2
 
    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
-   def return_previous(prev):
-      return prev
+   def return_previous(previous_value):
+      return previous_value
 
    pni = fpn.PipeNodeInput()
 
-   expr_1 = (pn_12345 | fpn.store("pn_a_results") | pn_double | fpn.store("pn_b_results"))
-   expr_1[pni]
+   pipeline_1 = (returns_12345 | fpn.store("first_result") | double_previous | fpn.store("second_result"))
+   pipeline_1[pni]
 
-   expr_2 = (fpn.recall("pn_a_results") | return_previous)
-   assert expr_2[pni] == 12345
+   pipeline_2 = (fpn.recall("first_result") | return_previous)
+   assert pipeline_2[pni] == 12345
 
-   expr_3 = (fpn.recall("pn_b_results") | return_previous)
-   assert expr_3[pni] == (12345 * 2)
+   pipeline_3 = (fpn.recall("second_result") | return_previous)
+   assert pipeline_3[pni] == (12345 * 2)
 
-As you can see, once results have been stored using ``fpn.store``, they are retrievable using ``fpn.recall`` for any other pipeline **that is evaluated with that same pni**.
+As you can see, once results have been stored using ``fpn.store``, they are retrievable using ``fpn.recall`` for any other pipeline **that is evaluated with that same pni**!
 
-Additionally, you can see the ``fpn.store`` and ``fpn.recall`` simply forward along the previous return values so that they can be inserted into a pipeline without any issue.
+Additionally, you can see that ``fpn.store`` and ``fpn.recall`` simply forward along the previous return values so that they can be seamlessly inserted anywhere into a pipeline.
 
 .. note::
    ``fpn.store`` and ``fpn.recall`` only work when the initial input is a valid instance or subclass instance of ``fpn.PipeNodeInput``.
