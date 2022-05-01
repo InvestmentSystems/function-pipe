@@ -179,31 +179,39 @@ it would have failed, since the first PN is *never* given ``fpn.PREDECESSOR_RETU
 Hiding the Kwargs
 =================
 
-Now that we know how to use ``**kwargs``, it's likely obvious that manually extracting the pipeline kwargs we care about every time will become cumbersome. On top of that, it's highly undesirable to require the signature of all PNs to accept arbitrary kwargs.
+Now that we know how to use ``**kwargs``, we can see that manually extracting the pipeline kwargs we care about each time is not good! On top of that, it's highly undesirable to require the signature of all PNs to accept arbitrary ``**kwargs``.
 
 Lucky for us, the ``fpn.pipe_node`` decorator can be optionally given the desired kwargs we want to positionally bind in the actual function signature.
 
 .. code:: python
    :class: copy-button
 
+   # Bind the first positional argument
    @fpn.pipe_node(fpn.PN_INPUT)
-   def multiply_input_by_2(pni):
-      return pni * 2
+   def multiply_input_by_2(pn_input):
+      return pn_input * 2
 
+   # Bind the first positional argument
    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
-   def add_7(prev_val):
-      return prev_val + 7
+   def add_7(previous_value):
+      return previous_value + 7
 
+   # Bind the first and second positional arguments
    @fpn.pipe_node(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
-   def divide_by_3_add_pni(pni, prev_val):
-      return (prev_val / 3) + pni
+   def divide_by_3_add_pn_input(pn_input, previous_value):
+      return (previous_value / 3) + pn_input
 
-   @fpn.pipe_node()
+   @fpn.pipe_node() # Bind no arguments
    def nothing_is_bound():
       pass
 
-   expr = (nothing_is_bound | multiply_input_by_2 | add_7 | divide_by_3_add_pni)
-   assert expr[12] == ((((12 * 2) + 7) / 3) + 12)
+   pipeline = (
+      nothing_is_bound
+      | multiply_input_by_2
+      | add_7
+      | divide_by_3_add_pn_input
+   )
+   assert pipeline[12] == ((((12 * 2) + 7) / 3) + 12)
 
 Ah. That's much better. It clears up the function signature, and makes it clear what each PN function needs in order to process properly.
 
@@ -212,16 +220,15 @@ To restate what's happening, arguments given to the decorator will be extracted 
 What About Other Arguments
 ==========================
 
-So far, we have most of the basics. However, there is one essential use case missing: how do I define additional arguments on my function? Let's say instead of a PN called ``add_7``, I have a PN called ``add``, that takes a number to add to the predecessor return value. Something like:
+So far, we have most of the basics. However, there is one essential use case missing: how do I define additional arguments on my function? Let's say instead of a PN called ``add_7``, I want to have a PN called ``add``, that takes an argument that will be added to the predecessor return value. Here's a pseudo-code example:
 
 .. code:: python
-   :class: copy-button
 
    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
-   def add(prev_value, value_to_add):
-      return prev_value + value_to_add
+   def add(previous_value, value_to_add):
+      return previous_value + value_to_add
 
-   expr = (pn1 | ... | add(13) | .. )
+   pipeline = (... | ... | add(13) | .. )
 
 Ideally, there should be a mechanism that allows the user *bind* (or *partial*) custom args & kwargs to give their pipelines all the flexibility needed.
 
@@ -236,29 +243,61 @@ The previous example would work exactly as expected had we replaced the ``fpn.pi
    :class: copy-button
 
    @fpn.pipe_node(fpn.PN_INPUT)
-   def init(pni):
-      return pni
+   def init(pn_input):
+      return pn_input
 
    @fpn.pipe_node_factory(fpn.PREDECESSOR_RETURN)
-   def add(prev_value, value_to_add):
-      return prev_value + value_to_add
+   def add(previous_value, value_to_add):
+      return previous_value + value_to_add
 
-   expr = (init | add(3) | add(4.2) | add(-2003))
-   assert expr[0] == (0 + 3 + 4.2 + -2003)
+   pipeline = (init | add(3) | add(4.2) | add(-2003))
+   assert pipeline[0] == (0 + 3 + 4.2 + -2003)
 
-To reiterate what's happening here, the ``fpn.pipe_node_factory`` decorates the method in such way it can be thought of as a factory that builds PNs. This is essential, since every element in a pipeline **must** be a PN! The PN factories allow us to *bind* (or *partial*) the resultant PN with different args/kwargs.
+To reiterate what's happening here, the ``fpn.pipe_node_factory`` decorates the method in such way it can be thought of as a factory that builds PNs. This is essential, since every element in a pipeline **must** be a PN! The PN factories allow us to used *bound* (or *partialed*) PN with arbitrary args/kwargs.
 
-.. warning::
-   A common failure is forgetting to call the decorator before it's put into the pipeline.
 
-   Using the above example, ``expr = (init | add | add)`` will fail, since ``add`` is **not** a PN, it's a PN factory!
+A Common Factory Mistake
+========================
 
-   Similarly, you cannot call a PN directly! ``expr = (init() | add(3))`` will fail, since you have attempted to evaluate ``init`` (aka a PN) during the creation of a pipeline!
+A common failure when using ``fpn.pipe_node_factory`` is forgetting to call the decorator before it's put into the pipeline!
 
-PN Input
-=========
+Building on the previous example, let's see what happens if we forgot to add an
+argument to ``add``.
 
-Up until now, the usage of ``pni`` (i.e. the arg conventionally bound to ``fpn.PN_INPUT``) has been a relatively diverse. This is because ``fpn.PN_INPUT`` refers to the initial input to the pipeline, and as such, can be any value. For these simple examples, I have been providing integers, but real-world cases typically rely on the standard ``fpn.PipeNodeInput`` class.
+.. code:: python
+   :class: copy-button
+
+   @fpn.pipe_node(fpn.PN_INPUT)
+   def init(pn_input):
+      return pn_input
+
+   @fpn.pipe_node_factory(fpn.PREDECESSOR_RETURN)
+   def add(previous_value, value_to_add):
+      return previous_value + value_to_add
+
+   # Uh-oh! One of the `add` pn factories was not given its required argument!
+   pipeline = (init | add(3) | add(4.2) | add)
+
+Let's see the failure message this will raise:
+
+.. code:: python
+
+   ---------------------------------------------------------------------------
+   ValueError                                Traceback (most recent call last)
+   ...
+   ValueError: Either you put a factory in a pipeline (i.e. not a pipe node), or your factory was given a reserved pipeline kwarg ('pn_input', 'predecessor_pn', 'predecessor_return').
+
+This failure should make sense now! Every node in a pipline **must** be a PN. Since ``add`` was not given a factory argument, it was a *PN factory*, **not** a PN.
+
+
+PN Input (pni)
+==============
+
+.. admonition:: Code Alias
+
+   pni: pn_input (argument conventionally bound to ``fpn.PN_INPUT``)
+
+Up until now, the usage of ``pni`` (i.e. the argument conventionally bound to ``fpn.PN_INPUT``) has been a relatively diverse. This is because ``fpn.PN_INPUT`` refers to the initial input to the pipeline, and as such, can be any value. For these simple examples, I have been providing integers, but real-world cases typically rely on the standard ``fpn.PipeNodeInput`` class.
 
 ``fpn.PipeNodeInput`` is a subclassable object, which has the ability to store results from previous PNs, recall values from previous PNs, and share state across PNs.
 
