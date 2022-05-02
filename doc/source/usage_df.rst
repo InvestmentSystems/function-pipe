@@ -1,12 +1,15 @@
 DataFrame Processing with FunctionNode and PipeNode
-===================================================
+***************************************************
+
+Intro
+=====
 
 The ``FunctionNode`` and ``PipeNode`` were built in large part to handle data processing pipelines with Pandas ``Series`` and ``DataFrame``. The following examples do simple things with data, but provide a framework that can be expanded to meet a wide range of needs.
 
 
 
-Sample Data
------------
+Tutorial Data Source
+====================
 
 Following an example in Wes McKinney's *Python for Data Analysis, 2nd Edition* (2017), these examples will use U.S. child birth name records from the Social Security Administration. Presently, this data is found at the following URL. We will write Python code to automatically download this data.
 
@@ -15,11 +18,11 @@ https://www.ssa.gov/oact/babynames/names.zip
 
 
 DataFrame Processing with FunctionNode
---------------------------------------
+======================================
 
-``FunctionNode``-wraped functions can be used to link functions in linear compositions. What is passed in the pipes can change, as long as a node is prepared to receive the value of its predecessor. As before, *core callables* are called only after the complete composition expression is evaluated to a single function and called with the *initial input*.
+``FunctionNode`` wrapped functions can be used to link functions in linear compositions. What is passed to the nodes can change, as long as a node is prepared to receive the value of its predecessor. As before, *core callables* are called only after the complete composition expression is evaluated to a single function and called with the *initial input*.
 
-We will use the follow imports throughout these examples. The ``requests`` and ``pandas`` third-party packages are easily installed with ``pip``.
+We will use the follow imports throughout these examples. The ``requests`` and ``pandas`` third-party packages can be installed using ``pip``.
 
 .. code-block:: python
     :class: copy-button
@@ -173,9 +176,9 @@ While this approach is illustrative, it is limited. Using simple linear composit
 
 
 DataFrame Processing with PipeNode
-----------------------------------
+==================================
 
-Building on the tutorial from earlier (LINK NEEDED), we will now expore processing dataframes using ``fpn.PipeNodes``.
+Building on the tutorial from earlier (LINK NEEDED), we will now expore processing dataframes using ``fpn.PipeNode``s.
 
 While not required to use pipelines, is is useful to create a ``PipeNodeInput`` subclass that will share state across the pipeline.
 
@@ -355,7 +358,7 @@ These examples demonstrate organizing data processing routines with ``PipeNode``
 
 
 Appendix
----------
+========
 
 Code shown in this tutorial:
 

@@ -1,5 +1,5 @@
-Intuitively Understanding Function Pipe Pipelines
-*************************************************
+Intuitively Understanding Pipelines
+***********************************
 
 .. admonition:: Tutorial Alias
 
