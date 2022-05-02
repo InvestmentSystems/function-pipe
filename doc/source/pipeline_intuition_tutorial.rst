@@ -107,7 +107,7 @@ To investigate, we will build up a slightly longer pipeline, and expand the node
    pipeline = (pipe_node_1 | pipe_node_2 | pipe_node_3)
    assert pipeline["original_input"] == 3
 
-   print(f"repr(pipeline) = "{repr(pipeline)}"")
+   print(f"repr(pipeline) = '{repr(pipeline)}'")
 
 Running the above code will produce the following output:
 
@@ -119,7 +119,7 @@ Running the above code will produce the following output:
    {"pn_input": "original_input", "predecessor_pn": <PN: pipe_node_1>, "predecessor_return": 1}
    | <function pipe_node_3 at 0x7f582c33b820>
    {"pn_input": "original_input", "predecessor_pn": <PN: pipe_node_1 | pipe_node_2>, "predecessor_return": 2}
-   repr(pipeline) = "<PN: pipe_node_1 | pipe_node_2 | pipe_node_3>"
+   repr(pipeline) = '<PN: pipe_node_1 | pipe_node_2 | pipe_node_3>'
 
 There are a few things happening here worth observing.
 
@@ -363,7 +363,12 @@ One of the main benefits to using a ``fpn.PipeNodeInput`` subclass, is the abili
 
    pni = fpn.PipeNodeInput()
 
-   pipeline_1 = (returns_12345 | fpn.store("first_result") | double_previous | fpn.store("second_result"))
+   pipeline_1 = (
+      returns_12345
+      | fpn.store("first_result")
+      | double_previous
+      | fpn.store("second_result")
+   )
    pipeline_1[pni]
 
    pipeline_2 = (fpn.recall("first_result") | return_previous)
@@ -447,15 +452,17 @@ Building on everything we've seen so far, let's take a look at the class below, 
 
    pipeline = (
          # The first three are PNs!
-         op.operation_1 | op.operation_2 | op.operation_3 |
+         op.operation_1
+         | op.operation_2
+         | op.operation_3
          # The second three are PN factories!
-         op.operation_4(10, user_kwarg=11) |
-         op.operation_5(12, user_kwarg=13) |
-         op.operation_6(14, user_kwarg=15) |
+         | op.operation_4(10, user_kwarg=11)
+         | op.operation_5(12, user_kwarg=13)
+         | op.operation_6(14, user_kwarg=15)
          # The rest are PNs (except `operation_8`)
-         op.operation_7 |
-         op.operation_8(16, user_kwarg=17) |
-         op.operation_9
+         | op.operation_7
+         | op.operation_8(16, user_kwarg=17)
+         | op.operation_9
    )
 
    assert pipeline[pni] == 9801 # Good luck figuring that one out ;)
@@ -540,7 +547,7 @@ Here is all of the code examples we have seen so far:
    pipeline = (pipe_node_1 | pipe_node_2 | pipe_node_3)
    assert pipeline["original_input"] == 3
 
-   print(f"repr(pipeline) = "{repr(pipeline)}"")
+   print(f"repr(pipeline) = '{repr(pipeline)}'")
 
    # Example 3:
 
@@ -565,7 +572,11 @@ Here is all of the code examples we have seen so far:
    # Example 4:
 
    pipeline_3 = (add_7 | multiply_input_by_2 | divide_by_3)
-   pipeline_3[12]
+
+   try:
+      pipeline_3[12]
+   except KeyError as e:
+      print(e)
 
    # Example 5:
 
@@ -620,7 +631,10 @@ Here is all of the code examples we have seen so far:
       return previous_value + value_to_add
 
    # Uh-oh! One of the `add` pn factories was not given its required argument!
-   pipeline = (init | add(3) | add(4.2) | add)
+   try:
+      pipeline = (init | add(3) | add(4.2) | add)
+   except ValueError as e:
+      print(e)
 
    # Example 8:
 
@@ -668,7 +682,12 @@ Here is all of the code examples we have seen so far:
 
    pni = fpn.PipeNodeInput()
 
-   pipeline_1 = (returns_12345 | fpn.store("first_result") | double_previous | fpn.store("second_result"))
+   pipeline_1 = (
+      returns_12345
+      | fpn.store("first_result")
+      | double_previous
+      | fpn.store("second_result")
+   )
    pipeline_1[pni]
 
    pipeline_2 = (fpn.recall("first_result") | return_previous)
@@ -733,15 +752,17 @@ Here is all of the code examples we have seen so far:
 
    pipeline = (
          # The first three are PNs!
-         op.operation_1 | op.operation_2 | op.operation_3 |
+         op.operation_1
+         | op.operation_2
+         | op.operation_3
          # The second three are PN factories!
-         op.operation_4(10, user_kwarg=11) |
-         op.operation_5(12, user_kwarg=13) |
-         op.operation_6(14, user_kwarg=15) |
+         | op.operation_4(10, user_kwarg=11)
+         | op.operation_5(12, user_kwarg=13)
+         | op.operation_6(14, user_kwarg=15)
          # The rest are PNs (except `operation_8`)
-         op.operation_7 |
-         op.operation_8(16, user_kwarg=17) |
-         op.operation_9
+         | op.operation_7
+         | op.operation_8(16, user_kwarg=17)
+         | op.operation_9
    )
 
    assert pipeline[pni] == 9801 # Good luck figuring that one out ;)
@@ -800,7 +821,13 @@ Example:
    def forward_pni(pni):
       return pni
 
-   pipeline = add_divide_exponentiate(multiply_input_by_2, -4, forward_pni, divide_by=25, to_power=add_3_to_pni)
+   pipeline = add_divide_exponentiate(
+      multiply_input_by_2,
+      -4,
+      forward_pni,
+      divide_by=25,
+      to_power=add_3_to_pni,
+   )
 
    assert pipeline[12] == ((12 * 2 - 4 + 12) / 25) ** (12 + 3)
 
@@ -809,9 +836,13 @@ As we can see, when factories are given PNs as args/kwargs, they are evaluated w
 Arithmetic
 ----------
 
-A helpful feature of PNs, is the ability to perform arithmetic operations on the pipeline during creation. Supported operators are: ``+``, ``-``, ``*``, ``/``, ``**``, ``~``, ``abs``, ``==``, ``!=``, ``>``, ``<``, ``<=``, and ``>=``.
+A helpful feature of PNs, is the ability to perform arithmetic operations on the pipeline during creation. Supported operators are:
 
-.. code::
+- Unary: ``-``, ``~``, and ``abs()``
+- Binary: ``+``, ``-``, ``*``, ``/``, ``**``, ``==``, ``!=``, ``>``, ``<``, ``<=``, and ``>=``
+
+.. code:: python
+   :class: copy-button
 
    @fpn.pipe_node(fpn.PN_INPUT)
    def get_pni(pni):
@@ -821,6 +852,6 @@ A helpful feature of PNs, is the ability to perform arithmetic operations on the
    def mul(prev, val):
       return prev*val
 
-   expr = ((get_pni + abs(-get_pni | mul(-0.9))) | mul(17) - 6 / get_pni)**23
+   expr = ((get_pni + abs(-get_pni | mul(-0.9))) | mul(17) - 6 / get_pni) ** 23
 
-   assert expr[12] == ((12 + abs(-12*-0.9))*17-6/12)**23
+   assert expr[12] == ((12 + abs(-12 * -0.9)) * 17 - 6 / 12) ** 23
