@@ -1,8 +1,8 @@
 DataFrame Processing with FunctionNode and PipeNode
 ***************************************************
 
-Intro
-=====
+Introduction
+============
 
 The ``FunctionNode`` and ``PipeNode`` were built in large part to handle data processing pipelines with Pandas ``Series`` and ``DataFrame``. The following examples do simple things with data, but provide a framework that can be expanded to meet a wide range of needs.
 
@@ -178,7 +178,7 @@ While this approach is illustrative, it is limited. Using simple linear composit
 DataFrame Processing with PipeNode
 ==================================
 
-Building on the tutorial from earlier (LINK NEEDED), we will now expore processing dataframes using ``PipeNode``.
+Building on the tutorial from earlier (LINK NEEDED), we will now explore processing dataframes using ``PipeNode``.
 
 While not required to use pipelines, is is useful to create a ``PipeNodeInput`` subclass that will share state across the pipeline.
 
@@ -357,10 +357,15 @@ These examples demonstrate organizing data processing routines with ``PipeNode``
 
 
 
-Appendix
-========
+Conclusion
+==========
 
-Code shown in this tutorial:
+After going through this tutorial, you should now have an understanding of:
+
+   - How to use ``fpn.FunctionNode`` to do DataFrame processing
+   - How to use ``fpn.PipeNode`` to do DataFrame processing
+
+Here is all of the code examples we have seen so far:
 
 .. code-block:: python
     :class: copy-button
