@@ -1,17 +1,20 @@
-
-
 String Processing with FunctionNode and PipeNode
-==================================================
+************************************************
+
+Intro
+=====
 
 Simple examples of ``FunctionNode`` and ``PipeNode`` can be provided with string processing functions. While not serving any practical purpose, these examples demonstrate core features. Other usage examples will provide more practical demonstrations.
 
 
+
 Importing function-pipe
-------------------------------------------
+=======================
 
 Throughout these examples function-pipe will be imported as follows.
 
 .. code-block:: python
+    :class: copy-button
 
     import function_pipe as fpn
 
@@ -20,95 +23,104 @@ This assumes the function_pipe.py module has been installed in ``site-packages``
 
 
 FunctionNodes for Function Composition
-------------------------------------------
+======================================
 
-FunctionNodes wrap callables. These callables can be lambdas, functions, or callable instances. We can wrap them directly by calling ``FunctionNode`` or use ``FunctionNode`` as a decorator.
+FunctionNodes wrap callables. These callables can be lambdas, functions, or instances of callable classes. We can wrap them directly by calling ``FunctionNode`` or use ``FunctionNode`` as a decorator.
 
 Using ``lambda`` callables for brevity, we can start with a number of simple functions that concatenate a string to an input string.
 
 .. code-block:: python
+    :class: copy-button
 
-    a = fpn.FunctionNode(lambda s: s + 'a')
-    b = fpn.FunctionNode(lambda s: s + 'b')
-    c = fpn.FunctionNode(lambda s: s + 'c')
-    d = fpn.FunctionNode(lambda s: s + 'd')
-    e = fpn.FunctionNode(lambda s: s + 'e')
+    a = fpn.FunctionNode(lambda s: s + "a")
+    b = fpn.FunctionNode(lambda s: s + "b")
+    c = fpn.FunctionNode(lambda s: s + "c")
+    d = fpn.FunctionNode(lambda s: s + "d")
+    e = fpn.FunctionNode(lambda s: s + "e")
 
 
 With or without the ``FunctionNode`` decorator, we can call and compose these in Python with nested calls, such that the return of the inner function is the argument to the outer function.
 
 .. code-block:: python
+    :class: copy-button
 
-    x = e(d(c(b(a('*')))))
-    assert x == '*abcde'
+    x = e(d(c(b(a("*")))))
+    assert x == "*abcde"
 
 This approach does not return a new function we can use repeatedly with different inputs. To do so, we can wrap the same nested calls in a ``lambda``. The *initial input* is the input provided to the resulting composed function.
 
 .. code-block:: python
+    :class: copy-button
 
     f = lambda x: e(d(c(b(a(x)))))
-    assert f('*') == '*abcde'
+    assert f("*") == "*abcde"
 
-Maintaining lots of functions in a nested presentation is unwieldy. As FunctionNodes, we can make the composition linear (and thus readable) by using the ``>>`` or ``<<`` operators.
+While this works, it can be hard to maintain. By using FunctionNodes, we can make this composition more readable through it's linear ``>>`` or ``<<`` operators.
 
-The ``>>`` returns a ``FunctionNode`` that, when called, pipes inputs to outputs from left to right. As with the ``lambda`` example above, we can reuse the resulting ``FunctionNode`` with different inputs.
+Both of these operators return a ``FunctionNode`` that, when called, pipes inputs to outputs (``>>``: left to right, ``<<``: left to right). As with the ``lambda`` example above, we can reuse the resulting ``FunctionNode`` with different inputs.
 
 .. code-block:: python
+    :class: copy-button
 
     f = a >> b >> c >> d >> e
-    assert f('*') == '*abcde'
-    assert f('?') == '?abcde'
+    assert f("*") == "*abcde"
+    assert f("?") == "?abcde"
 
 
 Depending on your perspective, a linear presentation from left to right may not map well to the nested presentation initially given. The ``<<`` operator can be used to process from right to left:
 
 .. code-block:: python
+    :class: copy-button
 
     f = a << b << c << d << e
-    assert f('*') == '*edcba'
+    assert f("*") == "*edcba"
 
 And even though it is ill-advised on grounds of poor readability and unnecessary conceptual complexity, you can do bidirectional composition too:
 
 .. code-block:: python
+    :class: copy-button
 
     f = a >> b >> c << d << e
-    assert f('*') == '*edabc'
+    assert f("*") == "*edabc"
 
 The ``FunctionNode`` overloads standard binary and unary operators to produce new ``FunctionNodes`` that encapsulate operator operations. Operators can be mixed with composition to create powerful expressions.
 
 .. code-block:: python
+    :class: copy-button
 
-    f = a >> (b * 4) >> (c + '___') >> d >> e
-    assert f('*') == '*ab*ab*ab*abc___de'
+    f = a >> (b * 4) >> (c + "___") >> d >> e
+    assert f("*") == "*ab*ab*ab*abc___de"
 
 We can create multiple FunctionNode expressions and combine them with operators and other compositions. Notice that the *initial input* "*" is made available to both *innermost* expressions, ``p`` and ``q``.
 
 .. code-block:: python
+    :class: copy-button
 
-    p = c >> (b + '_') * 2
+    p = c >> (b + "_") * 2
     q = d >> e * 2
     f = (p + q) * 2 + q
-    assert f('*') == '*cb_*cb_*de*de*cb_*cb_*de*de*de*de'
-    assert f('+') == '+cb_+cb_+de+de+cb_+cb_+de+de+de+de'
+    assert f("*") == "*cb_*cb_*de*de*cb_*cb_*de*de*de*de"
+    assert f("+") == "+cb_+cb_+de+de+cb_+cb_+de+de+de+de"
 
 
 In the preceeding examples the functions took only the value of the *predecessor return* as their input. Each function thus has only one argument. Functions with additional arguments are much more useful.
 
-As is common in approaches to function composition, we can partial (or curry in other applications) multi-argument functions so as to compose them in a state where they only require the *predecessor return* as their input.
+As is common in approaches to function composition, we can partial multi-argument functions so as to compose them in a state where they only require the *predecessor return* as their input.
 
 The ``FunctionNode`` exposes a ``partial`` method that simply calls ``functools.partial`` on the wrapped callable, and returns that new partialed function re-wrapped in a ``FunctionNode``.
 
 
 .. code-block:: python
+    :class: copy-button
 
     replace = fpn.FunctionNode(lambda s, src, dst: s.replace(src, dst))
 
-    p = c >> (b + '_') * 2 >> replace.partial(src='b', dst='B$')
-    q = d >> e * 2 >> replace.partial(src='d', dst='%D')
+    p = c >> (b + "_") * 2 >> replace.partial(src="b", dst="B$")
+    q = d >> e * 2 >> replace.partial(src="d", dst="%D")
     f = (p + q) * 2 + q
 
-    print(f('*'))
-    assert f('*') == '*cB$_*cB$_*%De*%De*cB$_*cB$_*%De*%De*%De*%De'
+    print(f("*"))
+    assert f("*") == "*cB$_*cB$_*%De*%De*cB$_*cB$_*%De*%De*%De*%De"
 
 
 

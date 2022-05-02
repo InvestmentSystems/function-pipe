@@ -151,7 +151,7 @@ With all functions decorated as ``FunctionNode``, we can create a composition ex
 
     f(FP_ZIP)
 
-.. image:: _static/usage_df_plot-a.png
+.. image:: images/usage_df_plot-a.png
 
 If, for the sake of display, we want to convert the floating-point percents to integers before ploting, we do not need to modify the ``FunctionNode`` implementation. As ``FunctionNode`` support operators, we can simply scale the output of the ``percent`` ``FunctionNode`` by 100.
 
@@ -169,7 +169,7 @@ If, for the sake of display, we want to convert the floating-point percents to i
 
     f(FP_ZIP)
 
-.. image:: _static/usage_df_plot-b.png
+.. image:: images/usage_df_plot-b.png
 
 While this approach is illustrative, it is limited. Using simple linear composition, as above, it is not possible with the same set of functions to produce multiple plots with the same data, or both write plots and output ``DataFrame`` data in Excel. This and more is possible with ``PipeNode``.
 
@@ -178,7 +178,7 @@ While this approach is illustrative, it is limited. Using simple linear composit
 DataFrame Processing with PipeNode
 ==================================
 
-Building on the tutorial from earlier (LINK NEEDED), we will now expore processing dataframes using ``fpn.PipeNode``s.
+Building on the tutorial from earlier (LINK NEEDED), we will now expore processing dataframes using ``PipeNode``.
 
 While not required to use pipelines, is is useful to create a ``PipeNodeInput`` subclass that will share state across the pipeline.
 
@@ -297,8 +297,8 @@ With these nodes defined, we can create many differnt processing pipelines. For 
 
     f[PNI("/tmp")]
 
-.. image:: _static/usage_df_plot-lesl-a.png
-.. image:: _static/usage_df_plot-dana-a.png
+.. image:: images/usage_df_plot-lesl-a.png
+.. image:: images/usage_df_plot-dana-a.png
 
 
 To support graphing the gender distribution for multiple names simultaneously, we can create a specialized node to merge ``PipeNode`` expressions passed as key-word arguments. We will then merge all those ``DataFrame`` key-value pairs.
@@ -349,8 +349,8 @@ Now we can create two expressions for each name we are investigating. These are 
     xlsx.save()
 
 
-.. image:: _static/usage_df_plot-merged-gender.png
-.. image:: _static/usage_df_xlsx.png
+.. image:: images/usage_df_plot-merged-gender.png
+.. image:: images/usage_df_xlsx.png
 
 
 These examples demonstrate organizing data processing routines with ``PipeNode`` expressions. Using ``PipeNodeInput`` sublcasses, data acesss routines can be centralized and made as efficient as possible. Further, ``PipeNodeInput`` sublcasses can provide common parameters, such as output directories, to all nodes. Finally, the results of sub-expressions can be stored and recalled within ``PipeNode`` expressions, or extracted after ``PipeNode`` execution for writing to disk.
