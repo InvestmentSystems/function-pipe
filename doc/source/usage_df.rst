@@ -175,9 +175,9 @@ While this approach is illustrative, it is limited. Using simple linear composit
 DataFrame Processing with PipeNode
 ----------------------------------
 
-The *PipeNode protocol* requires that functions accept at least ``**kwargs``. Thus, it is common to strucutre ``PipeNode`` functions differently than functions for simple composition. Note that the *core callable* stored in a ``PipeNode`` can be accessed with the ``unwrap`` property.
+Building on the tutorial from earlier (LINK NEEDED), we will now expore processing dataframes using ``fpn.PipeNodes``.
 
-While not required, creating a ``PipeNodeInput`` subclass to expose data necessary throughout a processing pipeline is a useful approach. This also provides a convenient place to store data loading routines and configuration values.
+While not required to use pipelines, is is useful to create a ``PipeNodeInput`` subclass that will share state across the pipeline.
 
 The following implementation of a ``PipeNodeInput`` subclass stores the URL as the class attribute ``URL_NAMES``, and stores the ``output_dir`` argument as an instance attribute. The ``load_data_dict`` function is essentially the same as before, though here it is a ``classmethod`` that reads ``URL_NAMES`` from the class. The resulting ``data_dict`` instance attribute is stored in the ``PipeNodeInput``, making it available to every node.
 
@@ -219,14 +219,13 @@ The following implementation of a ``PipeNodeInput`` subclass stores the URL as t
 
 
 
-We can generalize the ``gender_count_per_year`` function from above to count names per gender per year. Names often have variants, so we can match names with a passed-in function ``name_match``. As this node takes an *expression-level argument*, we decorate it with ``pipe_node_factory``. Setting this function to ``lambda n: True`` results in exactly the same functionality as the ``gender_count_per_year`` function. Notice that we access the ``data_dict`` from the ``**kwargs`` key ``fpn.PN_INPUT``.
+We can generalize the ``gender_count_per_year`` function from above to count names per gender per year. Names often have variants, so we can match names with a passed-in function ``name_match``. As this node takes an *expression-level argument*, we decorate it with ``pipe_node_factory``. Setting this function to ``lambda n: True`` results in exactly the same functionality as the ``gender_count_per_year`` function. Recall how we can access ``data_dict`` from the positionally bound ``pni`` argument.
 
 .. code-block:: python
     :class: copy-button
 
-    @fpn.pipe_node_factory
-    def name_count_per_year(name_match, **kwargs):
-        pni = kwargs[fpn.PN_INPUT]
+    @fpn.pipe_node_factory(fpn.PN_INPUT)
+    def name_count_per_year(pni, name_match):
         records = []
 
         for year, df in pni.data_dict.items():
@@ -246,14 +245,13 @@ We can generalize the ``gender_count_per_year`` function from above to count nam
         )
 
 
-A number of functions used above as ``FunctionNode`` can be recast as ``PipeNode`` by simpy retrieving the ``fpn.PREDECESSOR_RETURN`` key from the passed ``**kwargs``. Notice that nodes that need *expression-level arguments* are decorated with ``pipe_node_factory``. The ``plot`` node now takes a ``file_name`` argument, to be combined with the output directory set in the ``PipeNodeInput`` instance.
+A number of functions used above as ``FunctionNode`` can be recast as ``PipeNode`` by simpy binding ``fpn.PREDECESSOR_RETURN`` as the first positional argument. Recall that PNs that need *expression-level arguments* are decorated with ``pipe_node_factory``. The ``plot`` node now takes a ``file_name`` argument, to be combined with the output directory set in the ``PipeNodeInput`` instance.
 
 .. code-block:: python
     :class: copy-button
 
-    @fpn.pipe_node
-    def percent(**kwargs):
-        df = kwargs[fpn.PREDECESSOR_RETURN]
+    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
+    def percent(df):
         result = pd.DataFrame(index=df.index)
         total = df.sum(axis=1)
 
@@ -262,22 +260,20 @@ A number of functions used above as ``FunctionNode`` can be recast as ``PipeNode
 
         return result
 
-    @fpn.pipe_node_factory
-    def year_range(start, end, **kwargs):
-        return kwargs[fpn.PREDECESSOR_RETURN].loc[start:end]
+    @fpn.pipe_node_factory(fpn.PREDECESSOR_RETURN)
+    def year_range(df, start, end):
+        return df.loc[start:end]
 
-    @fpn.pipe_node_factory
-    def plot(file_name, **kwargs): # now we can pass a file name
-        pni = kwargs[fpn.PN_INPUT]
-        df = kwargs[fpn.PREDECESSOR_RETURN]
+    @fpn.pipe_node_factory(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
+    def plot(pni, df, file_name): # now we can pass a file name
         fp = os.path.join(pni.output_dir, file_name)
         ax = df.plot()
         ax.get_figure().savefig(fp)
         return fp
 
-    @fpn.pipe_node
-    def open_plot(**kwargs):
-        webbrowser.open(kwargs[fpn.PREDECESSOR_RETURN])
+    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
+    def open_plot(fp):
+        webbrowser.open(fp)
 
 
 With these nodes defined, we can create many differnt processing pipelines. For example, to plot two graphs, one each for the distribution of names that start with "lesl" and "dana", we can create the following expression. Notice that, for maximum efficiency, ``load_data_dict`` is called only once in the ``PipeNodeInput``. Further, now that ``plot`` takes a file name argument, we can uniquely name our plots.
@@ -302,19 +298,17 @@ With these nodes defined, we can create many differnt processing pipelines. For 
 .. image:: _static/usage_df_plot-dana-a.png
 
 
-To support graphing the gender distribution for multiple names simultaneously, we can create a specialized node to merge ``PipeNode`` expressions passed as key-word arguments. We can merge all ``DataFrame`` given with keys that are not part of the defined ``fpn.PIPE_NODE_KWARGS`` set.
+To support graphing the gender distribution for multiple names simultaneously, we can create a specialized node to merge ``PipeNode`` expressions passed as key-word arguments. We will then merge all those ``DataFrame`` key-value pairs.
 
 .. code-block:: python
     :class: copy-button
 
-    @fpn.pipe_node_factory
-    def merge_gender_data(**kwargs):
-        pni = kwargs[fpn.PN_INPUT]
+    @fpn.pipe_node_factory(fpn.PN_INPUT)
+    def merge_gender_data(pni, **kwargs):
         df = pd.DataFrame(index=pni.data_dict.keys())
         for k, v in kwargs.items():
-            if k not in fpn.PIPE_NODE_KWARGS:
-                for gender in ("M", "F"):
-                    df[k + "_" + gender] = v[gender]
+            for gender in ("M", "F"):
+                df[k + "_" + gender] = v[gender]
         return df
 
 
@@ -502,9 +496,8 @@ Code shown in this tutorial:
             fp_zip = os.path.join(output_dir, "names.zip")
             self.data_dict = self.load_data_dict(fp_zip)
 
-    @fpn.pipe_node_factory
-    def name_count_per_year(name_match, **kwargs):
-        pni = kwargs[fpn.PN_INPUT]
+    @fpn.pipe_node_factory(fpn.PN_INPUT)
+    def name_count_per_year(pni, name_match):
         records = []
 
         for year, df in pni.data_dict.items():
@@ -523,9 +516,8 @@ Code shown in this tutorial:
             columns=("M", "F"),
         )
 
-    @fpn.pipe_node
-    def percent(**kwargs):
-        df = kwargs[fpn.PREDECESSOR_RETURN]
+    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
+    def percent(df):
         result = pd.DataFrame(index=df.index)
         total = df.sum(axis=1)
 
@@ -534,22 +526,20 @@ Code shown in this tutorial:
 
         return result
 
-    @fpn.pipe_node_factory
-    def year_range(start, end, **kwargs):
-        return kwargs[fpn.PREDECESSOR_RETURN].loc[start:end]
+    @fpn.pipe_node_factory(fpn.PREDECESSOR_RETURN)
+    def year_range(df, start, end):
+        return df.loc[start:end]
 
-    @fpn.pipe_node_factory
-    def plot(file_name, **kwargs): # now we can pass a file name
-        pni = kwargs[fpn.PN_INPUT]
-        df = kwargs[fpn.PREDECESSOR_RETURN]
+    @fpn.pipe_node_factory(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
+    def plot(pni, df, file_name): # now we can pass a file name
         fp = os.path.join(pni.output_dir, file_name)
         ax = df.plot()
         ax.get_figure().savefig(fp)
         return fp
 
-    @fpn.pipe_node
-    def open_plot(**kwargs):
-        webbrowser.open(kwargs[fpn.PREDECESSOR_RETURN])
+    @fpn.pipe_node(fpn.PREDECESSOR_RETURN)
+    def open_plot(fp):
+        webbrowser.open(fp)
 
     f = (
         name_count_per_year(lambda n: n.lower().startswith("lesl"))
@@ -566,14 +556,12 @@ Code shown in this tutorial:
 
     # Example 4:
 
-    @fpn.pipe_node_factory
-    def merge_gender_data(**kwargs):
-        pni = kwargs[fpn.PN_INPUT]
+    @fpn.pipe_node_factory(fpn.PN_INPUT)
+    def merge_gender_data(pni, **kwargs):
         df = pd.DataFrame(index=pni.data_dict.keys())
         for k, v in kwargs.items():
-            if k not in fpn.PIPE_NODE_KWARGS:
-                for gender in ("M", "F"):
-                    df[k + "_" + gender] = v[gender]
+            for gender in ("M", "F"):
+                df[k + "_" + gender] = v[gender]
         return df
 
     lesl_pipeline = (
