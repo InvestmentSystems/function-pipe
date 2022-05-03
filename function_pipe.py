@@ -22,10 +22,14 @@ import typing as tp
 
 FN = tp.TypeVar("FN", bound="FunctionNode")
 PN = tp.TypeVar("PN", bound="PipeNode")
+PNI = tp.TypeVar("PNI", bound="PipeNodeInput")
+PipeNodeDescriptorT = tp.TypeVar("PipeNodeDescriptorT", bound="PipeNodeDescriptor")
+KeyPostion = tp.Union[tp.Callable, str]
+HandlerT = tp.Callable[[tp.Any], tp.Callable]
 
 
 
-def compose(*funcs):
+def compose(*funcs: tp.Callable) -> "FunctionNode":
     """
     Given a list of functions, execute them from right to left, passing
     the returned value of the right f to the left f. Store the reduced function in a FunctionNode
@@ -105,7 +109,7 @@ def _contains_expression(repr_str: str) -> bool:
     return True
 
 
-def _format_expression(f) -> str:
+def _format_expression(f: tp.Any) -> str:
     """
     `f` could be either a single argument, or an expression of arguments. If it is the latter, wrap in parenthesis
     """
@@ -115,7 +119,7 @@ def _format_expression(f) -> str:
     return repr_str
 
 
-def _repr(f) -> str:
+def _repr(f: tp.Any) -> str:
     """Provide a string representation of the FN, recursively representing defined arguments."""
 
     def get_function_name(f) -> str:
@@ -475,15 +479,11 @@ class FunctionNode:
         return compose(lhs, self)
 
     def __or__(self: FN, rhs: FN) -> FN:
-        """
-        Only implemented for PipeNode.
-        """
+        """Only implemented for PipeNode."""
         raise NotImplementedError()
 
     def __ror__(self: FN, lhs: FN) -> FN:
-        """
-        Only implemented for PipeNode.
-        """
+        """Only implemented for PipeNode."""
         raise NotImplementedError()
 
 
@@ -500,10 +500,18 @@ PIPE_NODE_KWARGS = frozenset((PREDECESSOR_RETURN, PREDECESSOR_PN, PN_INPUT))
 
 
 class PipeNode(FunctionNode):
-    """The multi-call structure of PipeNodes moves a FunctionNode between three states."""
+    """
+    This encapsulates the node that will be used in a pipeline.
+
+    It is not expected to be created directly, rather, through usage of ``pipe_node`` (and related) decorators.
+
+    PipeNodes will be in (or move between) one of three states, depending on where it was created, or what the current state of pipeline evaluation is
+    """
 
     class State(enum.Enum):
-        """The current state of the PipeNode"""
+        """
+        The current state of the PipeNode
+        """
 
         FACTORY = "FACTORY"
         EXPRESSION = "EXPRESSION"
@@ -516,14 +524,14 @@ class PipeNode(FunctionNode):
 
     # ---------------------------------------------------------------------------
     def __init__(
-        self,
-        function,
+        self: PN,
+        function: tp.Any,
         *,
-        doc_function=None,
-        doc_args=None,
-        doc_kwargs=None,
-        call_state=None,
-        predecessor=None,
+        doc_function: tp.Optional[tp.Callable] = None,
+        doc_args: tp.Tuple[tp.Any, ...] = (),
+        doc_kwargs: tp.Optional[tp.Dict[str, tp.Any]] = None,
+        call_state: tp.Optional[State] = None,
+        predecessor: tp.Optional[PN] = None,
     ):
         super().__init__(
             function=function,
@@ -531,81 +539,96 @@ class PipeNode(FunctionNode):
             doc_args=doc_args,
             doc_kwargs=doc_kwargs,
         )
-        self._call_state: self.State = call_state
+        self._call_state = call_state
         self._predecessor = predecessor
 
-    def __str__(self):
+    def __str__(self: PN) -> str:
         if self._call_state is PipeNode.State.FACTORY:
             return f"<PNF: {_repr(self)}>"
         return f"<PN: {_repr(self)}>"
 
-    def __repr__(self):
+    def __repr__(self: PN) -> str:
         if self._call_state is PipeNode.State.FACTORY:
             return f"<PNF: {_repr(self)}>"
         return f"<PN: {_repr(self)}>"
 
-    def partial(self, *args, **kwargs):
-        """PipeNode calling is dictated by the PipeNode protocol; partial-like behavior in expressions shold be achived with functions decorated with the  pipe_node_factory decorator."""
+    def partial(self: PN, *args: str, **kwargs: str):
+        """
+        Partialing PipeNodes is prohibited. Use ``pipe_node_factory`` (and related) decorators to pass in expression-level arguments.
+        """
         raise NotImplementedError()
 
     # ---------------------------------------------------------------------------
     # pipe node properties
 
     @property
-    def call_state(self) -> "State":
+    def call_state(self: PN) -> "State":
         """The current call state of the Node"""
         return self._call_state
 
     @property
-    def predecessor(self):
-        """The Node preceeding this Node in a pipeline. Can be None"""
+    def predecessor(self: PN) -> tp.Optional[PN]:
+        """
+        The PipeNode preceeding this Node in a pipeline. Can be None
+        """
         return self._predecessor
 
     # ---------------------------------------------------------------------------
     # composition operators
 
-    def __rshift__(self, rhs):
+    def __rshift__(self: PN, rhs: tp.Callable):
         """Only implemented for FunctionNode."""
         raise NotImplementedError()
 
-    def __rrshift__(self, lhs):
+    def __rrshift__(self: PN, lhs: tp.Callable):
         """Only implemented for FunctionNode."""
         raise NotImplementedError()
 
-    def __lshift__(self, rhs):
+    def __lshift__(self: PN, rhs: tp.Callable):
         """Only implemented for FunctionNode."""
         raise NotImplementedError()
 
-    def __rlshift__(self, lhs):
+    def __rlshift__(self: PN, lhs: tp.Callable):
         """Only implemented for FunctionNode."""
         raise NotImplementedError()
 
-    def __or__(self, rhs):
-        """Call RHS with LHS as an argument; left is passed as kwarg PREDECESSOR_PN. This calls the RHS immediately and does not return an FN unless prepared as a PipeNode"""
+    def __or__(self: PN, rhs: PN) -> PN:
+        """
+        Invokes ``rhs``, passing in ``self`` as the kwarg ``PREDECESSOR_PN``.
+        """
         return rhs(**{PREDECESSOR_PN: self})
 
-    def __ror__(self, lhs):
+    def __ror__(self: PN, lhs: PN) -> PN:
+        """
+        Invokes ``lhs``, passing in ``self`` as the kwarg ``PREDECESSOR_PN``.
+        """
         return self(**{PREDECESSOR_PN: lhs})
 
     # ---------------------------------------------------------------------------
 
-    def __getitem__(self, pn_input):
+    def __getitem__(self: PN, pn_input: tp.Any) -> tp.Any:
         """
-        Call self with some initial input `pn_input`. If None, will evaluate self with a default `PipeNodeInput` instance
+        Invokes ``self``, passing in ``pn_input`` as the kwarg ``PN_INPUT``.
 
-        If desired initial input is literally `None`, use `.(**{PN_INPUT: None})` instead.
+        NOTE:
+            - If ``None``, will evaluate self with a default ``PipeNodeInput`` instance
+            - If user desires for the initial input to be literally ``None``, use ``(**{PN_INPUT: None})`` instead.
         """
         pn_input = pn_input if pn_input is not None else PipeNodeInput()
         return self(**{PN_INPUT: pn_input})
 
-    def __call__(self, *args, **kwargs):
-        """Call the wrapped function."""
+    def __call__(self: PN, *args: tp.Any, **kwargs: tp.Any) -> tp.Any:
+        """
+        Call the wrapped function with args and kwargs.
+        """
         if self._call_state is PipeNode.State.FACTORY:
             return self._function(*args, **kwargs)
+
         if args or set(kwargs) - PIPE_NODE_KWARGS != set():
             raise ValueError(
                 "Cannot call a PipeNode with args or non-pipeline kwargs! Please refer to the documentation for proper usage."
             )
+
         return self._function(**kwargs)
 
 
@@ -613,8 +636,19 @@ class PipeNode(FunctionNode):
 # decorator utilities
 
 
-def _broadcast(*, factory_args, factory_kwargs, processing_args=(), processing_kwargs):
-    """Factor args/kwargs are those given to pipe_node_factory at the expression level. Processing args/kwargs are those given as the initial input, and used to call all processing functions. After calling factor args with processing args, the result is used as core_callable args"""
+def _broadcast(
+        *,
+        factory_args: tp.Tuple[tp.Any, ...],
+        factory_kwargs: tp.Dict[str, tp.Any],
+        processing_args: tp.Tuple[tp.Any, ...] = (),
+        processing_kwargs: tp.Dict[str, tp.Any] = {},
+    ) -> tp.Tuple[tp.Tuple[tp.Any, ...], tp.Dict[str, tp.Any]]:
+    """
+    Factory args/kwargs are those given to pipe_node_factory at the expression level.
+    Processing args/kwargs are those given as the initial input, and used to call all processing functions.
+
+    After calling factory args with processing args, the result is used as core_callable args
+    """
     core_callable_args = [
         arg(*processing_args, **processing_kwargs) if isinstance(arg, PipeNode) else arg
         for arg in factory_args
@@ -630,8 +664,10 @@ def _broadcast(*, factory_args, factory_kwargs, processing_args=(), processing_k
     return core_callable_args, core_callable_kwargs
 
 
-def core_logger(core_callable):
-    """A decorator to provide output on the execution of each core callable call. Alternative decorators can be used to partial pipe_node_factory and pipe_node."""
+def _core_logger(core_callable: tp.Callable) -> tp.Callable:
+    """
+    A decorator to provide output on the execution of each core callable call. Alternative decorators can be used to partial pipe_node_factory and pipe_node.
+    """
 
     @functools.wraps(core_callable)
     def wrapped(*args, **kwargs):
@@ -641,12 +677,17 @@ def core_logger(core_callable):
     return wrapped
 
 
-def _has_key_positions(*key_positions):
+def _has_key_positions(*key_positions: KeyPostion) -> bool:
+    """
+    Returns whether or not key_positions is a list of key positions, or if it is just a single callable
+    """
     return not bool(len(key_positions) == 1 and callable(key_positions[0]))
 
 
-def _is_unbound_self_method(core_callable):
-    """Inspects a given callable to determine if it's both unbound, and the first argument in it's signature is `self`"""
+def _is_unbound_self_method(core_callable: tp.Callable, *, self_keyword: str) -> bool:
+    """
+    Inspects a given callable to determine if it's both unbound, and the first argument in its signature is ``self_keyword``
+    """
     if isinstance(core_callable, types.MethodType):
         return False
 
@@ -657,58 +698,17 @@ def _is_unbound_self_method(core_callable):
         return False
 
     argspec = inspect.getfullargspec(core_callable)
-    return bool(argspec.args and argspec.args[0] == "self")
+    return bool(argspec.args and argspec.args[0] == self_keyword)
 
 
-class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
+def _pipe_kwarg_bind(*key_positions: KeyPostion) -> tp.Callable[[tp.Callable], tp.Callable]:
     """
-    Wraps up `pipe_node`/`pipe_node_factory` behavior in a descriptor, where it will bind instance and owner to the core_callable, and then pass it along the pipeline
-    """
-
-    __slots__ = ("core_callable", "core_handler", "key_positions")
-
-    def __init__(self, core_callable, core_handler, key_positions=()):
-        self.core_callable = core_callable
-        self.core_handler = core_handler
-        self.key_positions = key_positions
-
-    def __get__(self, instance, owner):
-        core_callable = self.core_callable.__get__(instance, owner)
-        if self.key_positions:
-            core_callable = _pipe_kwarg_bind(*self.key_positions)(core_callable)
-        return self.core_handler(core_callable)
-
-
-def _handle_descriptors_and_key_positions(*key_positions, core_handler):
-    has_key_positions = _has_key_positions(*key_positions)
-
-    # See if decorator was given no arguments, and received the core_callable directly.
-    if not has_key_positions:
-        final_callable = key_positions[0]
-
-        if _is_unbound_self_method(final_callable):
-            return PipeNodeDescriptor(final_callable, core_handler)
-
-        return core_handler(final_callable)
-
-    def decorator_wrapper(core_callable):
-        if _is_unbound_self_method(core_callable):
-            return PipeNodeDescriptor(core_callable, core_handler, key_positions)
-
-        final_callable = _pipe_kwarg_bind(*key_positions)(core_callable)
-        return core_handler(final_callable)
-
-    return decorator_wrapper
-
-
-def _pipe_kwarg_bind(*key_positions):
-    """
-    Binds n specific PN labels wrapped up in **kwargs to the first n positional arguments of the core callable
+    Binds a specific PN labels wrapped up in **kwargs to the first n positional arguments of the core callable
     """
 
-    def decorator(core_callable):
+    def decorator(core_callable: tp.Callable) -> tp.Callable:
         @functools.wraps(core_callable)
-        def wrapped(*args, **kwargs):
+        def wrapped(*args: tp.Any, **kwargs: tp.Any) -> tp.Any:
             target_args = [kwargs.pop(key) for key in key_positions]
             target_kwargs = {
                 k: v for k, v in kwargs.items() if k not in PIPE_NODE_KWARGS
@@ -719,15 +719,94 @@ def _pipe_kwarg_bind(*key_positions):
 
     return decorator
 
+class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
+    """
+    Wraps up ``pipe_node``/``pipe_node_factory`` behavior in a descriptor, where it will bind instance and owner to the core_callable, and then pass it along the pipeline
+    """
 
-def _descriptor_factory(*key_positions, decorator, core_decorator):
+    __slots__ = (
+        "core_callable",
+        "core_handler",
+        "key_positions",
+    )
+
+    def __init__(
+            self: PipeNodeDescriptorT,
+            core_callable: tp.Callable,
+            core_handler: HandlerT,
+            key_positions: tp.Tuple[KeyPostion, ...] = (),
+        ) -> None:
+        self.core_callable = core_callable
+        self.core_handler = core_handler
+        self.key_positions = key_positions
+
+    def __get__(
+            self: PipeNodeDescriptorT,
+            instance: tp.Any,
+            owner: tp.Any,
+        ) -> tp.Callable:
+        """
+        Returns a callable that will be bound to the instance/owner, and then passed along the pipeline.
+        """
+        core_callable: tp.Callable = self.core_callable.__get__(instance, owner)
+        if self.key_positions:
+            core_callable = _pipe_kwarg_bind(*self.key_positions)(core_callable)
+        return self.core_handler(core_callable)
+
+
+def _handle_descriptors_and_key_positions(
+        *key_positions: KeyPostion,
+        core_handler: HandlerT,
+        self_keyword: str,
+    ) -> tp.Union[
+        PipeNodeDescriptor,
+        HandlerT,
+        tp.Callable[
+            [tp.Callable],
+            tp.Union[
+                PipeNodeDescriptor,
+                HandlerT
+            ]
+        ]
+    ]:
+    """
+    We can return either a callable or a ``PipeNodeDescriptor``, OR, a decorator, when called, will return
+    either a callable or a ``PipeNodeDescriptor``.
+    """
+    has_key_positions = _has_key_positions(*key_positions)
+
+    # See if decorator was given no arguments, and received the core_callable directly.
+    if not has_key_positions:
+        final_callable = key_positions[0]
+        assert callable(final_callable)
+
+        if _is_unbound_self_method(final_callable, self_keyword=self_keyword):
+            return PipeNodeDescriptor(final_callable, core_handler)
+
+        return core_handler(final_callable)
+
+    def decorator_wrapper(core_callable: tp.Callable) -> tp.Union[PipeNodeDescriptor, HandlerT]:
+        if _is_unbound_self_method(core_callable, self_keyword=self_keyword):
+            return PipeNodeDescriptor(core_callable, core_handler, key_positions)
+
+        final_callable = _pipe_kwarg_bind(*key_positions)(core_callable)
+        return core_handler(final_callable)
+
+    return decorator_wrapper
+
+
+def _descriptor_factory(
+        *key_positions: KeyPostion,
+        decorator: tp.Callable,
+        core_decorator: HandlerT,
+    ) -> tp.Any:
     has_key_positions = _has_key_positions(*key_positions)
 
     class Descriptor:  # pylint: disable=too-few-public-methods
-        def __init__(self, func):
+        def __init__(self, func: tp.Callable) -> None:
             self._func = func
 
-        def __get__(self, instance, owner):
+        def __get__(self, instance: tp.Any, owner: tp.Any) -> tp.Callable:
             # Prefer this to partialing for prettier func reprs
             @functools.wraps(self._func)
             def func(*args, **kwargs):
@@ -735,6 +814,7 @@ def _descriptor_factory(*key_positions, decorator, core_decorator):
 
             if has_key_positions:
                 func = _pipe_kwarg_bind(*key_positions)(func)
+
             return decorator(func, core_decorator=core_decorator)
 
     if not has_key_positions:
@@ -747,33 +827,48 @@ def _descriptor_factory(*key_positions, decorator, core_decorator):
 # decorators
 
 
-def pipe_node_factory(*key_positions, core_decorator=core_logger):
+def pipe_node_factory(
+        *key_positions: KeyPostion,
+        core_decorator: HandlerT = _core_logger,
+        self_keyword: str = "self",
+    ) -> tp.Union[tp.Callable, tp.Callable[[tp.Any], PipeNode]]:
     """
-    Returns a factory, that when given some args/kwargs, will return a PipeNode.
+    Decorates a function to become a pipe node factory, that when given *expression-level* arguments, will return a ``PipeNode``
 
-    Calling with arguments results in those arguments being positionally bound to the first arguments in the core_callable
+    This can either be used as a decorator, or a decorator factory, similar to ``functools.lru_cache``.
 
-    **Example:**
+    **Examples**:
 
-    >>> @fpn.pipe_node_factory
-    >>> def func_a(arg1, arg2, **kwargs):
+    >>> @pipe_node_factory
+    >>> def func(a, b, **kwargs):
     >>>     pass
+    >>> ...
+    >>> func(1, 2) # This is now a PipeNode!
 
-    >>> func_a(1, 2) # This is now a PipeNode ready to be bound in a pipeline
+    >>> @pipe_node_factory()
+    >>> def func(*, a, b):
+    >>>     pass
+    >>> ...
+    >>> func(a=1, b=2) # This is now a PipeNode!
 
     >>> @fpn.pipe_node_factory(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
-    >>> def func_b(pni, prev_val, arg1, arg2):
+    >>> def func(pni, prev_val, a, *, b):
     >>>     # pni will be given the fpn.PN_INPUT from the pipeline
     >>>     # prev will be given the fpn.PREDECESSOR_RETURN from the pipeline
     >>>     pass
+    >>> ...
+    >>> func(1, b=2) # This is now a PipeNode!
 
-    >>> func_b(1, 2) # This is now a PipeNode ready to be bound in a pipeline
+    Args:
+        - ``key_positions``: either a single callable, or a list of keywords that will be positionally bound to the decorated function.
+        - ``core_decorator``: a decorator that will be applied to the core_callable. This is typically a logger. By default, it will print to stdout.
+        - ``self_keyword``: which keyword to look for when decorating instance methods.
     """
 
-    def build_factory(core_callable):
+    def build_factory(core_callable: tp.Callable) -> PipeNode:
         decorated_core_callable = core_decorator(core_callable)
 
-        def factory_f(*f_args, **f_kwargs):
+        def factory_f(*f_args: tp.Any, **f_kwargs: tp.Any) -> PipeNode:
             """This is the function returned by the decorator, used to create the PipeNode that resides in expressions after being called with arguments.
 
             f_args and f_kwargs are passed to the core_callable; if f_args or f_kwargs are PipeNode instances, they will be called with the processing args and kwargs (including PN_INPUT), either from process_f or (if innermost) from expression args.
@@ -783,7 +878,7 @@ def pipe_node_factory(*key_positions, core_decorator=core_logger):
                     f"Either you put a factory in a pipeline (i.e. not a pipe node), or your factory was given a reserved pipeline kwarg {tuple(PIPE_NODE_KWARGS)}."
                 )
 
-            def expression_f(**e_kwargs):
+            def expression_f(**e_kwargs: tp.Any) -> PipeNode:
                 """This is the PipeNode that resides in expressions prior to `|` operator evalation.
                 When called with `|`, the predecessor is passed is in e_kwargs as PREDECESSOR_PN. In this usage the e_args will always be empty.
 
@@ -815,7 +910,7 @@ def pipe_node_factory(*key_positions, core_decorator=core_logger):
 
                 predecessor_pn = e_kwargs[PREDECESSOR_PN]
 
-                def process_f(*p_args, **p_kwargs):
+                def process_f(*p_args: tp.Any, **p_kwargs: tp.Any) -> tp.Any:
                     # call the predecssor PipeNode (here a process_f) with these processing args; these are always the args given as the initial input to the innermost function, generally a PipeNodeInput
                     predecessor_return = predecessor_pn(*p_args, **p_kwargs)
 
@@ -859,18 +954,49 @@ def pipe_node_factory(*key_positions, core_decorator=core_logger):
 
         # return a function node so as to make doc_function available in test
         return PipeNode(
-            factory_f, doc_function=core_callable, call_state=PipeNode.State.FACTORY
+            factory_f,
+            doc_function=core_callable,
+            call_state=PipeNode.State.FACTORY,
         )
 
     return _handle_descriptors_and_key_positions(
-        *key_positions, core_handler=build_factory
+        *key_positions,
+        core_handler=build_factory,
+        self_keyword=self_keyword,
     )
 
 
-def pipe_node(*key_positions, core_decorator=core_logger):
-    """Decorate a function that takes no expression-level args."""
+def pipe_node(
+        *key_positions: KeyPostion,
+        core_decorator: HandlerT = _core_logger,
+        self_keyword: str = "self",
+    ) -> tp.Union[tp.Callable, PipeNode]:
+    """
+    Decorates a function to become a ``PipeNode`` that takes no expression-level args.
 
-    def create_factory_and_call_once(core_callable):
+    This can either be used as a decorator, or a decorator factory, similar to ``functools.lru_cache``.
+
+    **Examples**:
+
+    >>> @pipe_node
+    >>> def func(**kwargs):
+    >>>     pass
+
+    >>> @pipe_node()
+    >>> def func():
+    >>>     pass
+
+    >>> @pipe_node(fpn.PN_INPUT)
+    >>> def func(pn_input):
+    >>>     pass
+
+    Args:
+        - ``key_positions``: either a single callable, or a list of keywords that will be positionally bound to the decorated function.
+        - ``core_decorator``: a decorator that will be applied to the core_callable. This is typically a logger. By default, it will print to stdout.
+        - ``self_keyword``: which keyword to look for when decorating instance methods.
+    """
+
+    def create_factory_and_call_once(core_callable: tp.Callable) -> PipeNode:
         # Create a factory and call it once with no args to get an expresion-level function
         pnf = pipe_node_factory(core_callable, core_decorator=core_decorator)
 
@@ -880,17 +1006,88 @@ def pipe_node(*key_positions, core_decorator=core_logger):
         return pipe_node_factory(core_callable, core_decorator=core_decorator)()
 
     return _handle_descriptors_and_key_positions(
-        *key_positions, core_handler=create_factory_and_call_once
+        *key_positions,
+        core_handler=create_factory_and_call_once,
+        self_keyword=self_keyword,
     )
 
 
-def classmethod_pipe_node_factory(*key_positions, core_decorator=core_logger):
+def classmethod_pipe_node_factory(*key_positions: KeyPostion, core_decorator=_core_logger):
+    """
+    Decorates a function to become a classmethod pipe node factory, that when given *expression-level* arguments, will return a ``PipeNode``
+
+    This can either be used as a decorator, or a decorator factory, similar to ``functools.lru_cache``.
+
+    This is a convenience method, that is the mental equivalent to this pseudo-code:
+
+    >>> @classmethod
+    >>> @pipe_node_factory(...)
+    >>> def func(...)
+
+    **Examples**:
+
+    >>> @classmethod_pipe_node_factory
+    >>> def func(cls, a, b, **kwargs):
+    >>>     pass
+    >>> ...
+    >>> Class.func(1, 2) # This is now a PipeNode!
+
+    >>> @classmethod_pipe_node_factory()
+    >>> def func(cls, *, a, b):
+    >>>     pass
+    >>> ...
+    >>> Class.func(a=1, b=2) # This is now a PipeNode!
+
+    >>> @fpn.classmethod_pipe_node_factory(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
+    >>> def func(cls, pni, prev_val, a, *, b):
+    >>>     # pni will be given the fpn.PN_INPUT from the pipeline
+    >>>     # prev will be given the fpn.PREDECESSOR_RETURN from the pipeline
+    >>>     pass
+    >>> ...
+    >>> Class.func(1, b=2) # This is now a PipeNode!
+
+    Args:
+        - ``key_positions``: either a single callable, or a list of keywords that will be positionally bound to the decorated function.
+        - ``core_decorator``: a decorator that will be applied to the core_callable. This is typically a logger. By default, it will print to stdout.
+    """
     return _descriptor_factory(
         *key_positions, decorator=pipe_node_factory, core_decorator=core_decorator
     )
 
 
-def classmethod_pipe_node(*key_positions, core_decorator=core_logger):
+def classmethod_pipe_node(
+        *key_positions: KeyPostion,
+        core_decorator: HandlerT = _core_logger,
+    ) -> tp.Union[tp.Callable, PipeNode]:
+    """
+    Decorates a function to become a classmethod ``PipeNode`` that takes no expression-level args.
+
+    This can either be used as a decorator, or a decorator factory, similar to ``functools.lru_cache``.
+
+    This is a convenience method, that is the mental equivalent to this pseudo-code:
+
+    >>> @classmethod
+    >>> @pipe_node(...)
+    >>> def func(...)
+
+    **Examples**:
+
+    >>> @classmethod_pipe_node
+    >>> def func(cls, **kwargs):
+    >>>     pass
+
+    >>> @classmethod_pipe_node()
+    >>> def func(cls):
+    >>>     pass
+
+    >>> @classmethod_pipe_node(fpn.PN_INPUT)
+    >>> def func(cls, pn_input):
+    >>>     pass
+
+    Args:
+        - ``key_positions``: either a single callable, or a list of keywords that will be positionally bound to the decorated function.
+        - ``core_decorator``: a decorator that will be applied to the core_callable. This is typically a logger. By default, it will print to stdout.
+    """
     return _descriptor_factory(
         *key_positions, decorator=pipe_node, core_decorator=core_decorator
     )
@@ -899,45 +1096,70 @@ def classmethod_pipe_node(*key_positions, core_decorator=core_logger):
 staticmethod_pipe_node_factory = pipe_node_factory
 staticmethod_pipe_node = pipe_node
 
+staticmethod_pipe_node_factory.__doc__ = """
+This is an alias to ``pipe_node_factory`` that exists to be a similarly styled method alongside ``classmethod_pipe_node_factory``.
+"""
+staticmethod_pipe_node.__doc__ = """
+This is an alias to ``pipe_node`` that exists to be a similarly styled method alongside ``classmethod_pipe_node``.
+"""
+
 
 # -------------------------------------------------------------------------------
 # PipeNodeInput
 
 
 class PipeNodeInput:
-    """PipeNode input to support store and recall; subclassable to expose other attributes and parameters."""
+    """
+    PipeNode input to support store and recall; subclassable to expose other attributes and parameters.
+    """
 
-    def __init__(self):
+    def __init__(self: PNI) -> None:
         self._store = {}
 
-    def store(self, key, value):
+    def store(self: PNI, key: str, value: tp.Any) -> None:
+        """Store ``key`` and ``value`` in the underlying store."""
         if key in self._store:
             raise KeyError("cannot store the same key", key)
         self._store[key] = value
 
-    def recall(self, key):
+    def recall(self: PNI, key: str) -> tp.Any:
+        """Recall ``key`` from the underlying store. Can raise an ``KeyError``"""
         return self._store[key]
 
-    def store_items(self):
+    @property
+    def store_items(self: PNI) -> tp.ItemsView[str, tp.Any]:
+        """Return an items view of the underlying store."""
         return self._store.items()
 
 
 # -------------------------------------------------------------------------------
-# utility PipeNodes
+# Utility PipeNodes
 
 
 @pipe_node_factory(PN_INPUT, PREDECESSOR_RETURN)
-def store(pni, ret_val, label):
+def store(pni: PipeNodeInput, ret_val: tp.Any, label: str) -> tp.Any:
+    """
+    Store ``ret_val`` (the value returned from the previous ``PipeNode``) to ``pni`` under ``label``. Forward ``ret_val``.
+    """
     pni.store(label, ret_val)
     return ret_val
 
 
 @pipe_node_factory(PN_INPUT)
-def recall(pni, label):
+def recall(pni: PipeNodeInput, label: str) -> tp.Any:
+    """
+    Recall ``label`` from ``pni```` and return it. Can raise an ``KeyError``.
+    """
     return pni.recall(label)
 
 
 @pipe_node_factory()
-def call(*pns):
-    """Call the PipeNode arguments with the PipeNodeInput as necessary (which happens in the broadcast routine in handling *args)"""
+def call(*pns: PipeNode) -> tp.Any:
+    """
+    Since ``pns`` are all ``PipeNodes``, they will all be evaluated before passed in as values to this function.
+
+    This is called broadcasting.
+
+    After they have all been evaluated, return the last result.
+    """
     return pns[-1]  # the last result is returned
