@@ -772,15 +772,15 @@ def _handle_descriptors_and_key_positions(
         ]
     ]:
     """
-    We can return either a callable or a ``PipeNodeDescriptor``, OR, a decorator, when called, will return
-    either a callable or a ``PipeNodeDescriptor``.
+    We can return either a callable or a ``PipeNodeDescriptor``, OR, a decorator that when called,
+    will return either a callable or a ``PipeNodeDescriptor``.
     """
     has_key_positions = _has_key_positions(*key_positions)
 
     # See if decorator was given no arguments, and received the core_callable directly.
     if not has_key_positions:
         final_callable = key_positions[0]
-        assert callable(final_callable)
+        assert callable(final_callable), (type(final_callable), final_callable)
 
         if _is_unbound_self_method(final_callable, self_keyword=self_keyword):
             return PipeNodeDescriptor(final_callable, core_handler)

@@ -39,5 +39,4 @@ setup(
 
     keywords="functionnode pipenode composition pipeline pipe",
     py_modules=["function_pipe"], # no .py!
-    packages=["function_pipe"],
 )
