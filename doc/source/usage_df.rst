@@ -315,7 +315,7 @@ To support graphing the gender distribution for multiple names simultaneously, w
         return df
 
 
-Now we can create two expressions for each name we are investigating. These are then passed to ``merge_gender_data`` as key-word arguments. In all cases the raw data ``DataFrame`` is now retained with the ``store`` ``PipeNode``. After plotting and viewing, we can retrieve and iterate over stored keys and ``DataFrame`` by calling the ``store_items`` method of ``PipeNodeInput``. In this example, we load each ``DataFrame`` into a sheet of an Excel workbook.
+Now we can create two expressions for each name we are investigating. These are then passed to ``merge_gender_data`` as key-word arguments. In all cases the raw data ``DataFrame`` is now retained with the ``store`` ``PipeNode``. After plotting and viewing, we can retrieve and iterate over stored keys and ``DataFrame`` by accessing the ``store_items`` property of ``PipeNodeInput``. In this example, we load each ``DataFrame`` into a sheet of an Excel workbook.
 
 .. code-block:: python
     :class: copy-button
@@ -344,7 +344,7 @@ Now we can create two expressions for each name we are investigating. These are 
     f[pni]
 
     xlsx = pd.ExcelWriter(os.path.join(pni.output_dir, "output.xlsx"))
-    for k, df in pni.store_items():
+    for k, df in pni.store_items:
         df.to_excel(xlsx, k)
     xlsx.save()
 
@@ -596,6 +596,6 @@ Here is all of the code examples we have seen so far:
     f[pni]
 
     xlsx = pd.ExcelWriter(os.path.join(pni.output_dir, "output.xlsx"))
-    for k, df in pni.store_items():
+    for k, df in pni.store_items:
         df.to_excel(xlsx, k)
     xlsx.save()

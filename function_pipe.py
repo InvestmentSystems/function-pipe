@@ -29,7 +29,7 @@ HandlerT = tp.Callable[[tp.Any], tp.Callable]
 
 
 
-def compose(*funcs: tp.Callable) -> "FunctionNode":
+def compose(*funcs: tp.Callable) -> FN:
     """
     Given a list of functions, execute them from right to left, passing
     the returned value of the right f to the left f. Store the reduced function in a FunctionNode
@@ -39,7 +39,11 @@ def compose(*funcs: tp.Callable) -> "FunctionNode":
         lambda f, g: lambda *args, **kaargs: f(g(*args, **kaargs)), funcs
     )
     # args are reversed to show execution from right to left
-    return FunctionNode(reducer, doc_function=compose, doc_args=reversed(funcs))
+    return FunctionNode( # type: ignore
+        reducer,
+        doc_function=compose,
+        doc_args=tuple(reversed(funcs)),
+    )
 
 
 def _wrap_unary(func: tp.Callable[[FN], FN]) -> tp.Callable[[FN], FN]:
@@ -48,7 +52,7 @@ def _wrap_unary(func: tp.Callable[[FN], FN]) -> tp.Callable[[FN], FN]:
     """
 
     @functools.wraps(func)
-    def unary(lhs: tp.Callable) -> FN:
+    def unary(lhs: FN) -> FN:
         # wrapped function will prepare correct class, even if a constant
         cls = PipeNode if isinstance(lhs, PipeNode) else FunctionNode
         return cls(func(lhs), doc_function=func, doc_args=(lhs,))
@@ -283,7 +287,7 @@ class FunctionNode:
         """
         Return a new FunctionNode that when evaulated, will negate the result of ``self``
         """
-        return lambda *args, **kwargs: self(*args, **kwargs) * -1
+        return lambda *args, **kwargs: self(*args, **kwargs) * -1 # type: ignore
 
     @_wrap_unary
     def __invert__(self: FN) -> FN:
@@ -293,7 +297,7 @@ class FunctionNode:
         NOTE:
             This is generally expected to be a Boolean inversion, such as ~ (not) applied to a Numpy, Pandas, or Static-Frame objects.
         """
-        return lambda *args, **kwargs: self(*args, **kwargs).__invert__()
+        return lambda *args, **kwargs: self(*args, **kwargs).__invert__() # type: ignore
 
     @_wrap_unary
     def __abs__(self: FN) -> FN:
@@ -308,146 +312,144 @@ class FunctionNode:
         except ImportError:
             abs_func = abs
 
-        return lambda *args, **kwargs: abs_func(self(*args, **kwargs))
+        return lambda *args, **kwargs: abs_func(self(*args, **kwargs)) # type: ignore
 
     # ---------------------------------------------------------------------------
     # all binary operators return a function; the _wrap_binary decorator then wraps this function in a FunctionNode definition and supplies appropriate doc args. Note both left and righ sides are wrapped in FNs to permit operations on constants
 
     @_wrap_binary
-    def __add__(self: FN, rhs) -> FN:
+    def __add__(self: FN, rhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will add ``rhs`` to the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(self)(
+        return lambda *args, **kwargs: self.__class__(self)(  # type: ignore
             *args, **kwargs
         ) + self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __sub__(self: FN, rhs) -> FN:
+    def __sub__(self: FN, rhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will subtract ``rhs`` to the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(self)(
+        return lambda *args, **kwargs: self.__class__(self)(  # type: ignore
             *args, **kwargs
         ) - self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __mul__(self: FN, rhs) -> FN:
+    def __mul__(self: FN, rhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will multiply ``rhs`` by the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(self)(
+        return lambda *args, **kwargs: self.__class__(self)(  # type: ignore
             *args, **kwargs
         ) * self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __truediv__(self: FN, rhs) -> FN:
+    def __truediv__(self: FN, rhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will divide ``rhs`` by the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(self)(
+        return lambda *args, **kwargs: self.__class__(self)(  # type: ignore
             *args, **kwargs
         ) / self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __pow__(self: FN, rhs) -> FN:
+    def __pow__(self: FN, rhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will divide raise the result of ``self`` by ``rhs``
         """
-        return lambda *args, **kwargs: self.__class__(self)(
+        return lambda *args, **kwargs: self.__class__(self)(  # type: ignore
             *args, **kwargs
         ) ** self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __radd__(self: FN, lhs) -> FN:
+    def __radd__(self: FN, lhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will add ``rhs`` to the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(lhs)(
+        return lambda *args, **kwargs: self.__class__(lhs)(  # type: ignore
             *args, **kwargs
         ) + self.__class__(self)(*args, **kwargs)
 
     @_wrap_binary
-    def __rsub__(self: FN, lhs) -> FN:
+    def __rsub__(self: FN, lhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will subtract ``rhs`` to the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(lhs)(
+        return lambda *args, **kwargs: self.__class__(lhs)(  # type: ignore
             *args, **kwargs
         ) - self.__class__(self)(*args, **kwargs)
 
     @_wrap_binary
-    def __rmul__(self: FN, lhs) -> FN:
+    def __rmul__(self: FN, lhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will multiply ``rhs`` by the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(lhs)(
-                    """
-        Return a new FunctionNode will test if ``rhs``' is greater than or equal to the result of ``self``
-        """*args, **kwargs
+        return lambda *args, **kwargs: self.__class__(lhs)(  # type: ignore
+            *args, **kwargs
         ) * self.__class__(self)(*args, **kwargs)
 
     @_wrap_binary
-    def __rtruediv__(self: FN, lhs) -> FN:
+    def __rtruediv__(self: FN, lhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will divide ``rhs`` by the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(lhs)(
+        return lambda *args, **kwargs: self.__class__(lhs)(  # type: ignore
             *args, **kwargs
         ) / self.__class__(self)(*args, **kwargs)
 
     # comparison operators, expected to return booleans
     @_wrap_binary
-    def __eq__(self: FN, rhs) -> FN:
+    def __eq__(self: FN, rhs: tp.Any) -> FN: # type: ignore
         """
         Return a new FunctionNode will test if ``rhs``' equals the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(self)(
+        return lambda *args, **kwargs: self.__class__(self)(  # type: ignore
             *args, **kwargs
         ) == self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __lt__(self: FN, rhs) -> FN:
+    def __lt__(self: FN, rhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will test if ``rhs``' is less than the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(self)(
+        return lambda *args, **kwargs: self.__class__(self)(  # type: ignore
             *args, **kwargs
         ) < self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __le__(self: FN, rhs) -> FN:
+    def __le__(self: FN, rhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will test if ``rhs``' is less than or equal to the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(self)(
+        return lambda *args, **kwargs: self.__class__(self)(  # type: ignore
             *args, **kwargs
         ) <= self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __gt__(self: FN, rhs) -> FN:
+    def __gt__(self: FN, rhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will test if ``rhs``' is greater than the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(self)(
+        return lambda *args, **kwargs: self.__class__(self)(  # type: ignore
             *args, **kwargs
         ) > self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __ge__(self: FN, rhs) -> FN:
+    def __ge__(self: FN, rhs: tp.Any) -> FN:
         """
         Return a new FunctionNode will test if ``rhs``' is greater than or equal to the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(self)(
+        return lambda *args, **kwargs: self.__class__(self)(  # type: ignore
             *args, **kwargs
         ) >= self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __ne__(self: FN, rhs) -> FN:
+    def __ne__(self: FN, rhs: tp.Any) -> FN: # type: ignore
         """
         Return a new FunctionNode will test if ``rhs``' is not equal to the result of ``self``
         """
-        return lambda *args, **kwargs: self.__class__(self)(
+        return lambda *args, **kwargs: self.__class__(self)(  # type: ignore
             *args, **kwargs
         ) != self.__class__(rhs)(*args, **kwargs)
 
@@ -562,7 +564,7 @@ class PipeNode(FunctionNode):
     # pipe node properties
 
     @property
-    def call_state(self: PN) -> "State":
+    def call_state(self: PN) -> tp.Optional["State"]:
         """The current call state of the Node"""
         return self._call_state
 
@@ -649,10 +651,10 @@ def _broadcast(
 
     After calling factory args with processing args, the result is used as core_callable args
     """
-    core_callable_args = [
+    core_callable_args = tuple(
         arg(*processing_args, **processing_kwargs) if isinstance(arg, PipeNode) else arg
         for arg in factory_args
-    ]
+    )
 
     core_callable_kwargs = {
         kw: arg(*processing_args, **processing_kwargs)
@@ -709,7 +711,7 @@ def _pipe_kwarg_bind(*key_positions: KeyPostion) -> tp.Callable[[tp.Callable], t
     def decorator(core_callable: tp.Callable) -> tp.Callable:
         @functools.wraps(core_callable)
         def wrapped(*args: tp.Any, **kwargs: tp.Any) -> tp.Any:
-            target_args = [kwargs.pop(key) for key in key_positions]
+            target_args = [kwargs.pop(key) for key in key_positions] # type: ignore
             target_kwargs = {
                 k: v for k, v in kwargs.items() if k not in PIPE_NODE_KWARGS
             }
@@ -748,7 +750,7 @@ class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
         """
         Returns a callable that will be bound to the instance/owner, and then passed along the pipeline.
         """
-        core_callable: tp.Callable = self.core_callable.__get__(instance, owner)
+        core_callable: tp.Callable = self.core_callable.__get__(instance, owner) # type: ignore
         if self.key_positions:
             core_callable = _pipe_kwarg_bind(*self.key_positions)(core_callable)
         return self.core_handler(core_callable)
@@ -818,7 +820,7 @@ def _descriptor_factory(
             return decorator(func, core_decorator=core_decorator)
 
     if not has_key_positions:
-        return Descriptor(key_positions[0])
+        return Descriptor(key_positions[0]) # type: ignore
 
     return Descriptor
 
@@ -959,7 +961,7 @@ def pipe_node_factory(
             call_state=PipeNode.State.FACTORY,
         )
 
-    return _handle_descriptors_and_key_positions(
+    return _handle_descriptors_and_key_positions( # type: ignore
         *key_positions,
         core_handler=build_factory,
         self_keyword=self_keyword,
@@ -1003,9 +1005,9 @@ def pipe_node(
         if not callable(pnf):
             raise ValueError(f"{core_callable.__qualname__} requires an instance")
 
-        return pipe_node_factory(core_callable, core_decorator=core_decorator)()
+        return pipe_node_factory(core_callable, core_decorator=core_decorator)() # type: ignore
 
-    return _handle_descriptors_and_key_positions(
+    return _handle_descriptors_and_key_positions( # type: ignore
         *key_positions,
         core_handler=create_factory_and_call_once,
         self_keyword=self_keyword,
@@ -1114,7 +1116,7 @@ class PipeNodeInput:
     """
 
     def __init__(self: PNI) -> None:
-        self._store = {}
+        self._store: tp.Dict[str, tp.Any] = {}
 
     def store(self: PNI, key: str, value: tp.Any) -> None:
         """Store ``key`` and ``value`` in the underlying store."""

@@ -455,7 +455,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(C, pni._store["C"])
         self.assertEqual(D, pni._store["D"])
 
-        self.assertEqual(pni.store_items(), dict(A=A, B=B, C=C, D=D).items())
+        self.assertEqual(pni.store_items, dict(A=A, B=B, C=C, D=D).items())
 
     def test_core_decorator(self):
         # Modify the core_decorators
