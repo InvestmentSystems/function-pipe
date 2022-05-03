@@ -643,7 +643,7 @@ def _broadcast(
         factory_args: tp.Tuple[tp.Any, ...],
         factory_kwargs: tp.Dict[str, tp.Any],
         processing_args: tp.Tuple[tp.Any, ...] = (),
-        processing_kwargs: tp.Dict[str, tp.Any] = {},
+        processing_kwargs: tp.Dict[str, tp.Any],
     ) -> tp.Tuple[tp.Tuple[tp.Any, ...], tp.Dict[str, tp.Any]]:
     """
     Factory args/kwargs are those given to pipe_node_factory at the expression level.
