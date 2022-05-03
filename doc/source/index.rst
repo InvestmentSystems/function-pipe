@@ -1,7 +1,5 @@
-.. function-pipe documentation master file
-
 function-pipe
-=========================================
+=============
 
 Contents:
 
@@ -9,6 +7,7 @@ Contents:
    :maxdepth: 2
 
    intro
+   api
    pipeline_intuition_tutorial
    usage_strings
    usage_df

@@ -14,10 +14,15 @@ import inspect
 import re
 import sys
 import types
+import typing as tp
 
 
 # -------------------------------------------------------------------------------
 # FunctionNode and utilities
+
+FN = tp.TypeVar("FN", bound="FunctionNode")
+PN = tp.TypeVar("PN", bound="PipeNode")
+
 
 
 def compose(*funcs):
@@ -33,10 +38,13 @@ def compose(*funcs):
     return FunctionNode(reducer, doc_function=compose, doc_args=reversed(funcs))
 
 
-def _wrap_unary(func):
-    """Decorator for operator overloads. Given a higher order function that takes one args, wrap it in a FunctionNode function and provide documentation labels."""
+def _wrap_unary(func: tp.Callable[[FN], FN]) -> tp.Callable[[FN], FN]:
+    """
+    Decorator for operator overloads. Given a higher order function that takes one args, wrap it in a FunctionNode function and provide documentation labels.
+    """
 
-    def unary(lhs):
+    @functools.wraps(func)
+    def unary(lhs: tp.Callable) -> FN:
         # wrapped function will prepare correct class, even if a constant
         cls = PipeNode if isinstance(lhs, PipeNode) else FunctionNode
         return cls(func(lhs), doc_function=func, doc_args=(lhs,))
@@ -44,10 +52,10 @@ def _wrap_unary(func):
     return unary
 
 
-def _wrap_binary(func):
+def _wrap_binary(func: tp.Callable[[FN, tp.Any], FN]) -> tp.Callable[[FN, tp.Any], FN]:
     """Decorator for operators. Given a higher order function that takes two args, wrap it in a FunctionNode function and provide documentation labels."""
 
-    def binary(lhs, rhs):
+    def binary(lhs: FN, rhs: tp.Any) -> FN:
         # wrapped function will prepare correct class, even if a constant
         cls = PipeNode if isinstance(lhs, PipeNode) else FunctionNode
         return cls(func(lhs, rhs), doc_function=func, doc_args=(lhs, rhs))
@@ -183,7 +191,9 @@ def _repr(f) -> str:
 
 
 class FunctionNode:
-    """A wrapper for a callable that can reside in an expression of numerous FunctionNodes, or be modified with unary or binary operators."""
+    """
+    A wrapper for a callable that can reside in an expression of numerous FunctionNodes, or be modified with unary or binary operators.
+    """
 
     __slots__ = (
         "_function",
@@ -193,11 +203,22 @@ class FunctionNode:
     )
 
     # ---------------------------------------------------------------------------
-    def __init__(self, function, *, doc_function=None, doc_args=None, doc_kwargs=None):
+    def __init__(
+            self: FN,
+            function: tp.Any,
+            *,
+            doc_function: tp.Optional[tp.Callable] = None,
+            doc_args: tp.Tuple[tp.Any, ...] = (),
+            doc_kwargs: tp.Optional[tp.Dict[str, tp.Any]] = None,
+        ) -> None:
         """
         Args:
-            function: a callable
-            doc_function: the function to display; will be set to `function` if nor provided
+
+            - ``function``: a callable or value. If given a value, will create a function that simply returns that value.
+            - ``doc_function``: the function to display in the repr; will be set to ``function`` if not provided
+            - ``doc_args``: the positional arguments to display in the repr
+            - ``doc_kwargs``: the keyword arguments to display in the repr
+
         """
         # if a function node, re-wrap
         if isinstance(function, FunctionNode):
@@ -216,47 +237,68 @@ class FunctionNode:
             self._doc_kwargs = doc_kwargs
 
     @property
-    def unwrap(self):
-        """The doc_function should be set to the core function being wrapped, no matter the level of wrapping."""
+    def unwrap(self: FN) -> tp.Callable:
+        """
+        The doc_function should be set to the core function being wrapped, no matter the level of wrapping.
+        """
         # if the stored function is using _pipe_kwarg_bind, need to go lower
         doc_func = self
         while hasattr(doc_func, "_doc_function"):
             doc_func = getattr(doc_func, "_doc_function")
         return doc_func
 
-    def __call__(self, *args, **kwargs):
-        """Call the wrapped function."""
+    def __call__(self: FN, *args: tp.Any, **kwargs: tp.Any) -> tp.Any:
+        """
+        Call the wrapped function with args and kwargs.
+        """
         return self._function(*args, **kwargs)
 
-    def __str__(self):
+    def __str__(self: FN) -> str:
         return f"<FN: {_repr(self)}>"
 
-    def __repr__(self):
+    def __repr__(self: FN) -> str:
         return f"<FN: {_repr(self)}>"
 
-    def partial(self, *args, **kwargs):
-        """Return a new FunctionNode with a partialed function with args and kwargs'"""
+    def partial(self: FN, *args: tp.Any, **kwargs: tp.Any) -> "FunctionNode":
+        """
+        Return a new FunctionNode with a partialed function with args and kwargs.
+        """
         fn = FunctionNode(functools.partial(self._function, *args, **kwargs))
+
         for attr in self.__slots__:
             if not getattr(fn, attr):
                 setattr(fn, attr, getattr(self, attr))
+
         return fn
 
-    # ---------------------------------------------------------------------------
-    # all unary operators return a function; the _wrap_unary decorator then wraps this function in a FunctionNode
+    # -------------------------------------------------------------------------
+    # Unary Operators
 
     @_wrap_unary
-    def __neg__(self):
+    def __neg__(self: FN) -> FN:
+        """
+        Return a new FunctionNode that when evaulated, will negate the result of ``self``
+        """
         return lambda *args, **kwargs: self(*args, **kwargs) * -1
 
     @_wrap_unary
-    def __invert__(self):
-        """This is generally expected to be a Boolean inversion, such as ~ (not) applied to a numpy array or pd.Series."""
+    def __invert__(self: FN) -> FN:
+        """
+        Return a new FunctionNode that when evaulated, will invert the result of ``self``
+
+        NOTE:
+            This is generally expected to be a Boolean inversion, such as ~ (not) applied to a Numpy, Pandas, or Static-Frame objects.
+        """
         return lambda *args, **kwargs: self(*args, **kwargs).__invert__()
 
     @_wrap_unary
-    def __abs__(self):
-        """Absolute value; Will use ``numpy.abs`` if available, as the most common usage is for Numpy or Pandas objects."""
+    def __abs__(self: FN) -> FN:
+        """
+        Return a new FunctionNode that when evaulated, will find the absolute value of the result of ``self``
+
+        NOTE:
+             Will use ``numpy.abs`` if available, as the most common usage is for Numpy, Pandas, or Static-Frame objects.
+        """
         try:
             from numpy import abs as abs_func # Limit import overhead and dependencies
         except ImportError:
@@ -268,92 +310,139 @@ class FunctionNode:
     # all binary operators return a function; the _wrap_binary decorator then wraps this function in a FunctionNode definition and supplies appropriate doc args. Note both left and righ sides are wrapped in FNs to permit operations on constants
 
     @_wrap_binary
-    def __add__(self, rhs):
+    def __add__(self: FN, rhs) -> FN:
+        """
+        Return a new FunctionNode will add ``rhs`` to the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(self)(
             *args, **kwargs
         ) + self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __sub__(self, rhs):
+    def __sub__(self: FN, rhs) -> FN:
+        """
+        Return a new FunctionNode will subtract ``rhs`` to the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(self)(
             *args, **kwargs
         ) - self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __mul__(self, rhs):
+    def __mul__(self: FN, rhs) -> FN:
+        """
+        Return a new FunctionNode will multiply ``rhs`` by the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(self)(
             *args, **kwargs
         ) * self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __truediv__(self, rhs):
+    def __truediv__(self: FN, rhs) -> FN:
+        """
+        Return a new FunctionNode will divide ``rhs`` by the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(self)(
             *args, **kwargs
         ) / self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __pow__(self, rhs):
+    def __pow__(self: FN, rhs) -> FN:
+        """
+        Return a new FunctionNode will divide raise the result of ``self`` by ``rhs``
+        """
         return lambda *args, **kwargs: self.__class__(self)(
             *args, **kwargs
         ) ** self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __radd__(self, lhs):
+    def __radd__(self: FN, lhs) -> FN:
+        """
+        Return a new FunctionNode will add ``rhs`` to the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(lhs)(
             *args, **kwargs
         ) + self.__class__(self)(*args, **kwargs)
 
     @_wrap_binary
-    def __rsub__(self, lhs):
+    def __rsub__(self: FN, lhs) -> FN:
+        """
+        Return a new FunctionNode will subtract ``rhs`` to the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(lhs)(
             *args, **kwargs
         ) - self.__class__(self)(*args, **kwargs)
 
     @_wrap_binary
-    def __rmul__(self, lhs):
+    def __rmul__(self: FN, lhs) -> FN:
+        """
+        Return a new FunctionNode will multiply ``rhs`` by the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(lhs)(
-            *args, **kwargs
+                    """
+        Return a new FunctionNode will test if ``rhs``' is greater than or equal to the result of ``self``
+        """*args, **kwargs
         ) * self.__class__(self)(*args, **kwargs)
 
     @_wrap_binary
-    def __rtruediv__(self, lhs):
+    def __rtruediv__(self: FN, lhs) -> FN:
+        """
+        Return a new FunctionNode will divide ``rhs`` by the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(lhs)(
             *args, **kwargs
         ) / self.__class__(self)(*args, **kwargs)
 
     # comparison operators, expected to return booleans
     @_wrap_binary
-    def __eq__(self, rhs):
+    def __eq__(self: FN, rhs) -> FN:
+        """
+        Return a new FunctionNode will test if ``rhs``' equals the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(self)(
             *args, **kwargs
         ) == self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __lt__(self, rhs):
+    def __lt__(self: FN, rhs) -> FN:
+        """
+        Return a new FunctionNode will test if ``rhs``' is less than the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(self)(
             *args, **kwargs
         ) < self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __le__(self, rhs):
+    def __le__(self: FN, rhs) -> FN:
+        """
+        Return a new FunctionNode will test if ``rhs``' is less than or equal to the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(self)(
             *args, **kwargs
         ) <= self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __gt__(self, rhs):
+    def __gt__(self: FN, rhs) -> FN:
+        """
+        Return a new FunctionNode will test if ``rhs``' is greater than the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(self)(
             *args, **kwargs
         ) > self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __ge__(self, rhs):
+    def __ge__(self: FN, rhs) -> FN:
+        """
+        Return a new FunctionNode will test if ``rhs``' is greater than or equal to the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(self)(
             *args, **kwargs
         ) >= self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __ne__(self, rhs):
+    def __ne__(self: FN, rhs) -> FN:
+        """
+        Return a new FunctionNode will test if ``rhs``' is not equal to the result of ``self``
+        """
         return lambda *args, **kwargs: self.__class__(self)(
             *args, **kwargs
         ) != self.__class__(rhs)(*args, **kwargs)
@@ -361,28 +450,40 @@ class FunctionNode:
     # ---------------------------------------------------------------------------
     # composition operators
 
-    def __rshift__(self, rhs):
-        """Composition; return a function that will call LHS first, then RHS"""
+    def __rshift__(self: FN, rhs: tp.Callable) -> FN:
+        """
+        Composes a new FunctionNode will call ``lhs`` first, and then feed its result into ``rhs``
+        """
         return compose(rhs, self)
 
-    def __rrshift__(self, lhs):
-        """Composition; return a function that will call LHS first, then RHS"""
+    def __rrshift__(self: FN, lhs: tp.Callable) -> FN:
+        """
+        Composes a new FunctionNode will call ``lhs`` first, and then feed its result into ``rhs``
+        """
         return compose(self, lhs)
 
-    def __lshift__(self, rhs):
-        """Composition; return a function that will call RHS first, then LHS"""
+    def __lshift__(self: FN, rhs: tp.Callable) -> FN:
+        """
+        Composes a new FunctionNode will call ``rhs`` first, and then feed its result into ``lhs``
+        """
         return compose(self, rhs)
 
-    def __rlshift__(self, lhs):
-        """Composition; return a function that will call RHS first, then LHS"""
+    def __rlshift__(self: FN, lhs: tp.Callable) -> FN:
+        """
+        Composes a new FunctionNode will call ``rhs`` first, and then feed its result into ``lhs``
+        """
         return compose(lhs, self)
 
-    def __or__(self, rhs):
-        """Only implemented for PipeNode."""
+    def __or__(self: FN, rhs: FN) -> FN:
+        """
+        Only implemented for PipeNode.
+        """
         raise NotImplementedError()
 
-    def __ror__(self, lhs):
-        """Only implemented for PipeNode."""
+    def __ror__(self: FN, lhs: FN) -> FN:
+        """
+        Only implemented for PipeNode.
+        """
         raise NotImplementedError()
 
 
@@ -652,21 +753,21 @@ def pipe_node_factory(*key_positions, core_decorator=core_logger):
 
     Calling with arguments results in those arguments being positionally bound to the first arguments in the core_callable
 
-    Example:
+    **Example:**
 
-        @fpn.pipe_node_factory
-        def func_a(arg1, arg2, **kwargs):
-            pass
+    >>> @fpn.pipe_node_factory
+    >>> def func_a(arg1, arg2, **kwargs):
+    >>>     pass
 
-        func_a(1, 2) # This is now a PipeNode ready to be bound in a pipeline
+    >>> func_a(1, 2) # This is now a PipeNode ready to be bound in a pipeline
 
-        @fpn.pipe_node_factory(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
-        def func_b(pni, prev_val, arg1, arg2):
-            # pni will be given the fpn.PN_INPUT from the pipeline
-            # prev will be given the fpn.PREDECESSOR_RETURN from the pipeline
-            pass
+    >>> @fpn.pipe_node_factory(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
+    >>> def func_b(pni, prev_val, arg1, arg2):
+    >>>     # pni will be given the fpn.PN_INPUT from the pipeline
+    >>>     # prev will be given the fpn.PREDECESSOR_RETURN from the pipeline
+    >>>     pass
 
-        func_b(1, 2) # This is now a PipeNode ready to be bound in a pipeline
+    >>> func_b(1, 2) # This is now a PipeNode ready to be bound in a pipeline
     """
 
     def build_factory(core_callable):

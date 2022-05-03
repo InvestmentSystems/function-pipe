@@ -1,7 +1,5 @@
-
-
 Introduction
-==================================
+************
 
 The function-pipe Python module defines the class FunctionNode (FN) and decorators to create the derived-class PipeNode (PN). FNs are wrappers of callables that permit returning new FNs after applying operators, composing callables, or partialing. This supports the flexible combination of functions in a lazy and declarative manner.
 
@@ -16,13 +14,13 @@ Packages: https://pypi.python.org/pypi/function-pipe
 
 
 Getting Started
-----------------
+===============
 
 FunctionNode and PipeNode are abstract tools for linking Python functions, and are applicable in many domains. The best way to get to know them is to follow some examples and experiment. This documentation provide examples in a number of domains, including processing strings and Pandas DataFrames.
 
 
 Installation
-------------------
+============
 
 A standard setuptools installer is available via PyPI:
 
@@ -42,14 +40,14 @@ https://github.com/InvestmentSystems/function-pipe
 
 
 History
---------
+=======
 
 The function-pipe tools were developed within Investment Systems, the core development team of Research Affiliates, LLC. Many of the approaches implemented were first created by Max Moroz in 2012. Christopher Ariza subsequently refined and extended those approaches into the current models of FunctionNode and PipeNode. The first public release of function-pipe was in January 2017. After that, Charles Burkland improved the quality and user-friendliness of the library, along with the addition of some more explicit functions. The second public release was made in April 2022.
 
 
 
 Related
---------
+=======
 
 The function-pipe tools, consisting of one module of less than 600 lines, offers a very focused and light-weight approach to extended function composition in Python. There are many other tools that offer similar and/or broader resources. A few are listed below.
 
