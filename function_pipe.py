@@ -1098,13 +1098,6 @@ def classmethod_pipe_node(
 staticmethod_pipe_node_factory = pipe_node_factory
 staticmethod_pipe_node = pipe_node
 
-staticmethod_pipe_node_factory.__doc__ = """
-This is an alias to ``pipe_node_factory`` that exists to be a similarly styled method alongside ``classmethod_pipe_node_factory``.
-"""
-staticmethod_pipe_node.__doc__ = """
-This is an alias to ``pipe_node`` that exists to be a similarly styled method alongside ``classmethod_pipe_node``.
-"""
-
 
 # -------------------------------------------------------------------------------
 # PipeNodeInput
