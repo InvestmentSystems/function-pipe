@@ -27,7 +27,6 @@ KeyPostion = tp.Union[tp.Callable, str]
 HandlerT = tp.Callable[[tp.Any], tp.Callable]
 
 
-
 def compose(*funcs: tp.Callable) -> FN:
     """
     Given a list of functions, execute them from right to left, passing
@@ -38,7 +37,7 @@ def compose(*funcs: tp.Callable) -> FN:
         lambda f, g: lambda *args, **kaargs: f(g(*args, **kaargs)), funcs
     )
     # args are reversed to show execution from right to left
-    return FunctionNode( # type: ignore
+    return FunctionNode(  # type: ignore
         reducer,
         doc_function=compose,
         doc_args=tuple(reversed(funcs)),
@@ -211,13 +210,13 @@ class FunctionNode:
 
     # ---------------------------------------------------------------------------
     def __init__(
-            self: FN,
-            function: tp.Any,
-            *,
-            doc_function: tp.Optional[tp.Callable] = None,
-            doc_args: tp.Tuple[tp.Any, ...] = (),
-            doc_kwargs: tp.Optional[tp.Dict[str, tp.Any]] = None,
-        ) -> None:
+        self: FN,
+        function: tp.Any,
+        *,
+        doc_function: tp.Optional[tp.Callable] = None,
+        doc_args: tp.Tuple[tp.Any, ...] = (),
+        doc_kwargs: tp.Optional[tp.Dict[str, tp.Any]] = None,
+    ) -> None:
         """
         Args:
 
@@ -286,7 +285,7 @@ class FunctionNode:
         """
         Return a new FunctionNode that when evaulated, will negate the result of ``self``
         """
-        return lambda *args, **kwargs: self(*args, **kwargs) * -1 # type: ignore
+        return lambda *args, **kwargs: self(*args, **kwargs) * -1  # type: ignore
 
     @_wrap_unary
     def __invert__(self: FN) -> FN:
@@ -296,14 +295,14 @@ class FunctionNode:
         NOTE:
             This is generally expected to be a Boolean inversion, such as ~ (not) applied to a Numpy, Pandas, or Static-Frame objects.
         """
-        return lambda *args, **kwargs: self(*args, **kwargs).__invert__() # type: ignore
+        return lambda *args, **kwargs: self(*args, **kwargs).__invert__()  # type: ignore
 
     @_wrap_unary
     def __abs__(self: FN) -> FN:
         """
         Return a new FunctionNode that when evaulated, will find the absolute value of the result of ``self``
         """
-        return lambda *args, **kwargs: abs(self(*args, **kwargs)) # type: ignore
+        return lambda *args, **kwargs: abs(self(*args, **kwargs))  # type: ignore
 
     # ---------------------------------------------------------------------------
     # all binary operators return a function; the _wrap_binary decorator then wraps this function in a FunctionNode definition and supplies appropriate doc args. Note both left and righ sides are wrapped in FNs to permit operations on constants
@@ -391,7 +390,7 @@ class FunctionNode:
 
     # comparison operators, expected to return booleans
     @_wrap_binary
-    def __eq__(self: FN, rhs: tp.Any) -> FN: # type: ignore
+    def __eq__(self: FN, rhs: tp.Any) -> FN:  # type: ignore
         """
         Return a new FunctionNode will test if ``rhs``' equals the result of ``self``
         """
@@ -436,7 +435,7 @@ class FunctionNode:
         ) >= self.__class__(rhs)(*args, **kwargs)
 
     @_wrap_binary
-    def __ne__(self: FN, rhs: tp.Any) -> FN: # type: ignore
+    def __ne__(self: FN, rhs: tp.Any) -> FN:  # type: ignore
         """
         Return a new FunctionNode will test if ``rhs``' is not equal to the result of ``self``
         """
@@ -630,12 +629,12 @@ class PipeNode(FunctionNode):
 
 
 def _broadcast(
-        *,
-        factory_args: tp.Tuple[tp.Any, ...],
-        factory_kwargs: tp.Dict[str, tp.Any],
-        processing_args: tp.Tuple[tp.Any, ...] = (),
-        processing_kwargs: tp.Dict[str, tp.Any],
-    ) -> tp.Tuple[tp.Tuple[tp.Any, ...], tp.Dict[str, tp.Any]]:
+    *,
+    factory_args: tp.Tuple[tp.Any, ...],
+    factory_kwargs: tp.Dict[str, tp.Any],
+    processing_args: tp.Tuple[tp.Any, ...] = (),
+    processing_kwargs: tp.Dict[str, tp.Any],
+) -> tp.Tuple[tp.Tuple[tp.Any, ...], tp.Dict[str, tp.Any]]:
     """
     Factory args/kwargs are those given to pipe_node_factory at the expression level.
     Processing args/kwargs are those given as the initial input, and used to call all processing functions.
@@ -694,7 +693,9 @@ def _is_unbound_self_method(core_callable: tp.Callable, *, self_keyword: str) ->
     return bool(argspec.args and argspec.args[0] == self_keyword)
 
 
-def _pipe_kwarg_bind(*key_positions: KeyPostion) -> tp.Callable[[tp.Callable], tp.Callable]:
+def _pipe_kwarg_bind(
+    *key_positions: KeyPostion,
+) -> tp.Callable[[tp.Callable], tp.Callable]:
     """
     Binds a specific PN labels wrapped up in **kwargs to the first n positional arguments of the core callable
     """
@@ -702,7 +703,7 @@ def _pipe_kwarg_bind(*key_positions: KeyPostion) -> tp.Callable[[tp.Callable], t
     def decorator(core_callable: tp.Callable) -> tp.Callable:
         @functools.wraps(core_callable)
         def wrapped(*args: tp.Any, **kwargs: tp.Any) -> tp.Any:
-            target_args = [kwargs.pop(key) for key in key_positions] # type: ignore
+            target_args = [kwargs.pop(key) for key in key_positions]  # type: ignore
             target_kwargs = {
                 k: v for k, v in kwargs.items() if k not in PIPE_NODE_KWARGS
             }
@@ -711,6 +712,7 @@ def _pipe_kwarg_bind(*key_positions: KeyPostion) -> tp.Callable[[tp.Callable], t
         return wrapped
 
     return decorator
+
 
 class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
     """
@@ -724,44 +726,38 @@ class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
     )
 
     def __init__(
-            self: PipeNodeDescriptorT,
-            core_callable: tp.Callable,
-            core_handler: HandlerT,
-            key_positions: tp.Tuple[KeyPostion, ...] = (),
-        ) -> None:
+        self: PipeNodeDescriptorT,
+        core_callable: tp.Callable,
+        core_handler: HandlerT,
+        key_positions: tp.Tuple[KeyPostion, ...] = (),
+    ) -> None:
         self.core_callable = core_callable
         self.core_handler = core_handler
         self.key_positions = key_positions
 
     def __get__(
-            self: PipeNodeDescriptorT,
-            instance: tp.Any,
-            owner: tp.Any,
-        ) -> tp.Callable:
+        self: PipeNodeDescriptorT,
+        instance: tp.Any,
+        owner: tp.Any,
+    ) -> tp.Callable:
         """
         Returns a callable that will be bound to the instance/owner, and then passed along the pipeline.
         """
-        core_callable: tp.Callable = self.core_callable.__get__(instance, owner) # type: ignore
+        core_callable: tp.Callable = self.core_callable.__get__(instance, owner)  # type: ignore
         if self.key_positions:
             core_callable = _pipe_kwarg_bind(*self.key_positions)(core_callable)
         return self.core_handler(core_callable)
 
 
 def _handle_descriptors_and_key_positions(
-        *key_positions: KeyPostion,
-        core_handler: HandlerT,
-        self_keyword: str,
-    ) -> tp.Union[
-        PipeNodeDescriptor,
-        HandlerT,
-        tp.Callable[
-            [tp.Callable],
-            tp.Union[
-                PipeNodeDescriptor,
-                HandlerT
-            ]
-        ]
-    ]:
+    *key_positions: KeyPostion,
+    core_handler: HandlerT,
+    self_keyword: str,
+) -> tp.Union[
+    PipeNodeDescriptor,
+    HandlerT,
+    tp.Callable[[tp.Callable], tp.Union[PipeNodeDescriptor, HandlerT]],
+]:
     """
     We can return either a callable or a ``PipeNodeDescriptor``, OR, a decorator that when called,
     will return either a callable or a ``PipeNodeDescriptor``.
@@ -778,7 +774,9 @@ def _handle_descriptors_and_key_positions(
 
         return core_handler(final_callable)
 
-    def decorator_wrapper(core_callable: tp.Callable) -> tp.Union[PipeNodeDescriptor, HandlerT]:
+    def decorator_wrapper(
+        core_callable: tp.Callable,
+    ) -> tp.Union[PipeNodeDescriptor, HandlerT]:
         if _is_unbound_self_method(core_callable, self_keyword=self_keyword):
             return PipeNodeDescriptor(core_callable, core_handler, key_positions)
 
@@ -789,10 +787,10 @@ def _handle_descriptors_and_key_positions(
 
 
 def _descriptor_factory(
-        *key_positions: KeyPostion,
-        decorator: tp.Callable,
-        core_decorator: HandlerT,
-    ) -> tp.Any:
+    *key_positions: KeyPostion,
+    decorator: tp.Callable,
+    core_decorator: HandlerT,
+) -> tp.Any:
     has_key_positions = _has_key_positions(*key_positions)
 
     class Descriptor:  # pylint: disable=too-few-public-methods
@@ -811,7 +809,7 @@ def _descriptor_factory(
             return decorator(func, core_decorator=core_decorator)
 
     if not has_key_positions:
-        return Descriptor(key_positions[0]) # type: ignore
+        return Descriptor(key_positions[0])  # type: ignore
 
     return Descriptor
 
@@ -821,10 +819,10 @@ def _descriptor_factory(
 
 
 def pipe_node_factory(
-        *key_positions: KeyPostion,
-        core_decorator: HandlerT = _core_logger,
-        self_keyword: str = "self",
-    ) -> tp.Union[tp.Callable, tp.Callable[[tp.Any], PipeNode]]:
+    *key_positions: KeyPostion,
+    core_decorator: HandlerT = _core_logger,
+    self_keyword: str = "self",
+) -> tp.Union[tp.Callable, tp.Callable[[tp.Any], PipeNode]]:
     """
     Decorates a function to become a pipe node factory, that when given *expression-level* arguments, will return a ``PipeNode``
 
@@ -952,7 +950,7 @@ def pipe_node_factory(
             call_state=PipeNode.State.FACTORY,
         )
 
-    return _handle_descriptors_and_key_positions( # type: ignore
+    return _handle_descriptors_and_key_positions(  # type: ignore
         *key_positions,
         core_handler=build_factory,
         self_keyword=self_keyword,
@@ -960,10 +958,10 @@ def pipe_node_factory(
 
 
 def pipe_node(
-        *key_positions: KeyPostion,
-        core_decorator: HandlerT = _core_logger,
-        self_keyword: str = "self",
-    ) -> tp.Union[tp.Callable, PipeNode]:
+    *key_positions: KeyPostion,
+    core_decorator: HandlerT = _core_logger,
+    self_keyword: str = "self",
+) -> tp.Union[tp.Callable, PipeNode]:
     """
     Decorates a function to become a ``PipeNode`` that takes no expression-level args.
 
@@ -996,16 +994,18 @@ def pipe_node(
         if not callable(pnf):
             raise ValueError(f"{core_callable.__qualname__} requires an instance")
 
-        return pipe_node_factory(core_callable, core_decorator=core_decorator)() # type: ignore
+        return pipe_node_factory(core_callable, core_decorator=core_decorator)()  # type: ignore
 
-    return _handle_descriptors_and_key_positions( # type: ignore
+    return _handle_descriptors_and_key_positions(  # type: ignore
         *key_positions,
         core_handler=create_factory_and_call_once,
         self_keyword=self_keyword,
     )
 
 
-def classmethod_pipe_node_factory(*key_positions: KeyPostion, core_decorator=_core_logger):
+def classmethod_pipe_node_factory(
+    *key_positions: KeyPostion, core_decorator=_core_logger
+):
     """
     Decorates a function to become a classmethod pipe node factory, that when given *expression-level* arguments, will return a ``PipeNode``
 
@@ -1049,9 +1049,9 @@ def classmethod_pipe_node_factory(*key_positions: KeyPostion, core_decorator=_co
 
 
 def classmethod_pipe_node(
-        *key_positions: KeyPostion,
-        core_decorator: HandlerT = _core_logger,
-    ) -> tp.Union[tp.Callable, PipeNode]:
+    *key_positions: KeyPostion,
+    core_decorator: HandlerT = _core_logger,
+) -> tp.Union[tp.Callable, PipeNode]:
     """
     Decorates a function to become a classmethod ``PipeNode`` that takes no expression-level args.
 

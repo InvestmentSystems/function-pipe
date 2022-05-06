@@ -666,7 +666,7 @@ class TestUnit(unittest.TestCase):
         sub_div_add = sub / add
         mul_add_div = mul + div
         div_sub_mul = div - mul
-        add_pow_add = add ** add
+        add_pow_add = add**add
 
         self.assertEqual("<PN: (a+b)*(a-b)>", repr(add_mul_sub))
         self.assertEqual("<PN: (a-b)/(a+b)>", repr(sub_div_add))
@@ -692,7 +692,7 @@ class TestUnit(unittest.TestCase):
         complex_b = (a <= b) >= (-c + (d - (e * a) ** b) / (c != abs(d)) == ~e)
         complex_c = ((-a <= abs(b)) >= (c + d)) - (e * a) ** (~b / c) != (d == e)
         complex_d = ((a <= b) >= c) + (~d - ((abs(-e) * a) ** b) / (c != d) == e)
-        complex_e = abs(a) <= b >= c + ~d - e * a ** b / c != -d == e
+        complex_e = abs(a) <= b >= c + ~d - e * a**b / c != -d == e
 
         self.assertEqual(
             "<PN: (((a<=~b)>=c)+d)-(abs(e)*(a**((b/-c)!=(d==e))))>", repr(complex_a)
@@ -911,7 +911,7 @@ class TestUnit(unittest.TestCase):
 
         @fpn.pipe_node_factory(fpn.PREDECESSOR_RETURN)
         def pn4(prev, val):
-            return prev ** val
+            return prev**val
 
         def test_pn1(pn_or_expr):
             self.assertEqual(1, pn_or_expr.unwrap(1, 2, 3, 4, 5, 6))

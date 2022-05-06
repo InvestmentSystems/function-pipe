@@ -9,6 +9,15 @@ on:
 jobs:
   build:
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - command: invoke black --check
+        - command: invoke isort --check
+        - command: invoke lint
+        - command: invoke mypy
+
     runs-on: ubuntu-18.04
 
     steps:
@@ -33,6 +42,7 @@ jobs:
         pip install Cython==0.29.13
         pip install setuptools==41.2.0
         pip install -r requirements-test.txt
+
 
     - name: Invoke Quality
       run: inv quality

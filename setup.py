@@ -12,16 +12,28 @@ from setuptools import setup
 # python setup.py bdist_wheel
 # twine upload dist/*
 
-here = path.abspath(path.dirname(__file__))
-with open(path.join(here, "README.rst"), encoding="utf-8") as f:
-    long_description = f.read()
+ROOT_DIR_FP = path.abspath(path.dirname(__file__))
+
+def get_long_description() -> str:
+    with open(path.join(ROOT_DIR_FP, "README.rst"), encoding="utf-8") as f:
+        return f.read()
+
+def get_version() -> str:
+    with open(path.join(ROOT_DIR_FP, 'function_pipe', '__init__.py'),
+            encoding='utf-8') as f:
+        for l in f:
+            if l.startswith('__version__'):
+                if '#' in l:
+                    l = l.split('#')[0].strip()
+                return l.split('=')[-1].strip()[1:-1]
+    raise ValueError('__version__ not found!')
 
 setup(
     name="function-pipe",
-    version="2.0.0",
+    version=get_version(),
 
     description="Tools for extended function composition and pipelines",
-    long_description=long_description,
+    long_description=get_long_description(),
 
     url="https://github.com/InvestmentSystems/function-pipe",
     author="Christopher Ariza, Charles Burkland",
@@ -40,5 +52,9 @@ setup(
         ],
 
     keywords="functionnode pipenode composition pipeline pipe",
-    py_modules=["function_pipe"], # no .py!
+    #py_modules=["function_pipe"], # no .py!
+    packages=["function_pipe",
+        "function_pipe.core",
+        "function_pipe.test",
+        ],
 )

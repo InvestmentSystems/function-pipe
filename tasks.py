@@ -38,8 +38,7 @@ def test(context, cov=False):
     if cov:
         cmd += " --cov=function_pipe --cov-report=xml"
 
-    print(cmd)
-    context.run(cmd)
+    context.run(cmd, echo=True)
 
 
 @invoke.task
@@ -48,8 +47,7 @@ def coverage(context):
     Perform code coverage, and open report HTML.
     """
     cmd = "pytest -s --color no --cov=function_pipe/core --cov-report html"
-    print(cmd)
-    context.run(cmd)
+    context.run(cmd, echo=True)
     import webbrowser
     webbrowser.open("htmlcov/index.html")
 
@@ -74,36 +72,32 @@ def quality(context):
 
 
 @invoke.task
-def isort(context, tlt=None, check=False):
+def isort(context, check=False):
     """Sort imports."""
-    cmd = "isort"
+    cmd = "isort function_pipe"
     if check:
         cmd += " --check"
     context.run(cmd, echo=True, pty=True)
 
 
 @invoke.task
-def black(context, tlt=None, check=False):
+def black(context, check=False):
     """Format code."""
     args = ["black"]
     if check:
         args.append("--check")
-    if tlt is not None:
-        args.append(expand_tlt_package(tlt))
-    else:
-        args.extend(get_targets())
-    command = quote_and_join(args)
-    context.run(command, echo=True, pty=True)
+
+    cmd = "black function_pipe"
+    if check:
+        cmd += " --check"
+    context.run(cmd, echo=True, pty=True)
+
 
 @invoke.task  # Don't put the jobs here, since we need to forward args to them!
-def formatting(context, tlt=None, check=False, default=False):
+def formatting(context, check=False):
     """Run all formatting checks."""
-    if default and VcsUtil.get_repo_branch() != VcsUtil.DEFAULT_BRANCH:
-        return
-    # Fastest to slowest:
-    init(context, tlt=tlt, check=check)
-    black(context, tlt=tlt, check=check)
-    isort(context, tlt=tlt, check=check)
+    black(context, check=check)
+    isort(context, check=check)
 
 
 #-------------------------------------------------------------------------------
