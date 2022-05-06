@@ -303,16 +303,8 @@ class FunctionNode:
     def __abs__(self: FN) -> FN:
         """
         Return a new FunctionNode that when evaulated, will find the absolute value of the result of ``self``
-
-        NOTE:
-             Will use ``numpy.abs`` if available, as the most common usage is for Numpy, Pandas, or Static-Frame objects.
         """
-        try:
-            from numpy import abs as abs_func # Limit import overhead and dependencies
-        except ImportError:
-            abs_func = abs
-
-        return lambda *args, **kwargs: abs_func(self(*args, **kwargs)) # type: ignore
+        return lambda *args, **kwargs: abs(self(*args, **kwargs)) # type: ignore
 
     # ---------------------------------------------------------------------------
     # all binary operators return a function; the _wrap_binary decorator then wraps this function in a FunctionNode definition and supplies appropriate doc args. Note both left and righ sides are wrapped in FNs to permit operations on constants
