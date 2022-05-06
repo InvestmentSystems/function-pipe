@@ -1,0 +1,12 @@
+[tool.black]
+target-version = ['py38']
+
+[tool.isort]
+atomic = true
+color_output = true
+combine_as_imports = true
+force_grid_wrap = 2
+profile = 'black'
+py_version = '38'
+star_first = true
+treat_all_comments_as_code = true

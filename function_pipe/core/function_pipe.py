@@ -16,7 +16,6 @@ import sys
 import types
 import typing as tp
 
-
 # -------------------------------------------------------------------------------
 # FunctionNode and utilities
 

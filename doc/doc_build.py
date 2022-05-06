@@ -1,6 +1,6 @@
 import os
-from sphinx.cmd.build import main
 
+from sphinx.cmd.build import main
 
 if __name__ == "__main__":
     # must be in this directory

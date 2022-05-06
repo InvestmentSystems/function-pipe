@@ -1,7 +1,7 @@
-from os import path
-
 # To use a consistent encoding
 from codecs import open
+from os import path
+
 # Always prefer setuptools over distutils
 from setuptools import setup
 
@@ -33,8 +33,10 @@ setup(
         "Intended Audience :: Developers",
         "Topic :: Software Development",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         ],
 
     keywords="functionnode pipenode composition pipeline pipe",

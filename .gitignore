@@ -5,3 +5,8 @@ __pycache__/
 .vscode/
 doc/build/
 
+# Ignore the .coverage file created by nosetests --with-coverage
+.coverage
+
+.pytest_cache/
+.mypy_cache/
