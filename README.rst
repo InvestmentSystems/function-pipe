@@ -11,6 +11,7 @@
   :target: https://github.com/InvestmentSystems/function-pipe/actions?query=workflow%3ATest
 
 .. image:: https://img.shields.io/github/workflow/status/InvestmentSystems/function-pipe/Quality?label=quality&logo=Github
+  :target: https://github.com/InvestmentSystems/function-pipe/actions?query=workflow%3AQuality
 
 .. image:: https://img.shields.io/readthedocs/function-pipe.svg
   :target: https://function-pipe.readthedocs.io/en/latest
