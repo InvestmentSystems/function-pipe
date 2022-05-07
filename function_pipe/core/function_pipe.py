@@ -124,7 +124,7 @@ def _format_expression(f: tp.Any) -> str:
 def _repr(f: tp.Any) -> str:
     """Provide a string representation of the FN, recursively representing defined arguments."""
 
-    def get_function_name(f) -> str:
+    def get_function_name(f: tp.Any) -> str:
         """Get a string representation of the callable, or its code if it is a lambda. In some cases, `f` may not be function, so just return a string."""
         if not isinstance(f, types.FunctionType) or not hasattr(f, "__name__"):
             return str(f)
@@ -544,7 +544,7 @@ class PipeNode(FunctionNode):
             return f"<PNF: {_repr(self)}>"
         return f"<PN: {_repr(self)}>"
 
-    def partial(self: PN, *args: str, **kwargs: str):
+    def partial(self: PN, *args: str, **kwargs: str) -> PN:
         """
         Partialing PipeNodes is prohibited. Use ``pipe_node_factory`` (and related) decorators to pass in expression-level arguments.
         """
@@ -568,19 +568,19 @@ class PipeNode(FunctionNode):
     # ---------------------------------------------------------------------------
     # composition operators
 
-    def __rshift__(self: PN, rhs: tp.Callable):
+    def __rshift__(self: PN, rhs: tp.Callable) -> PN:
         """Only implemented for FunctionNode."""
         raise NotImplementedError()
 
-    def __rrshift__(self: PN, lhs: tp.Callable):
+    def __rrshift__(self: PN, lhs: tp.Callable) -> PN:
         """Only implemented for FunctionNode."""
         raise NotImplementedError()
 
-    def __lshift__(self: PN, rhs: tp.Callable):
+    def __lshift__(self: PN, rhs: tp.Callable) -> PN:
         """Only implemented for FunctionNode."""
         raise NotImplementedError()
 
-    def __rlshift__(self: PN, lhs: tp.Callable):
+    def __rlshift__(self: PN, lhs: tp.Callable) -> PN:
         """Only implemented for FunctionNode."""
         raise NotImplementedError()
 
@@ -662,7 +662,7 @@ def _core_logger(core_callable: tp.Callable) -> tp.Callable:
     """
 
     @functools.wraps(core_callable)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args: tp.Any, **kwargs: tp.Any) -> tp.Any:
         print("|", str(core_callable), file=sys.stderr)
         return core_callable(*args, **kwargs)
 
@@ -676,7 +676,11 @@ def _has_key_positions(*key_positions: KeyPostion) -> bool:
     return not bool(len(key_positions) == 1 and callable(key_positions[0]))
 
 
-def _is_unbound_self_method(core_callable: tp.Callable, *, self_keyword: str) -> bool:
+def _is_unbound_self_method(
+    core_callable: tp.Union[classmethod, staticmethod, tp.Callable],
+    *,
+    self_keyword: str,
+) -> bool:
     """
     Inspects a given callable to determine if it's both unbound, and the first argument in its signature is ``self_keyword``
     """
@@ -800,7 +804,7 @@ def _descriptor_factory(
         def __get__(self, instance: tp.Any, owner: tp.Any) -> tp.Callable:
             # Prefer this to partialing for prettier func reprs
             @functools.wraps(self._func)
-            def func(*args, **kwargs):
+            def func(*args: tp.Any, **kwargs: tp.Any) -> tp.Any:
                 return self._func(owner, *args, **kwargs)
 
             if has_key_positions:
@@ -1004,8 +1008,8 @@ def pipe_node(
 
 
 def classmethod_pipe_node_factory(
-    *key_positions: KeyPostion, core_decorator=_core_logger
-):
+    *key_positions: KeyPostion, core_decorator: HandlerT = _core_logger
+) -> tp.Callable:
     """
     Decorates a function to become a classmethod pipe node factory, that when given *expression-level* arguments, will return a ``PipeNode``
 

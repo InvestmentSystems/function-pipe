@@ -56,7 +56,7 @@ def coverage(context):
 def mypy(context):
     """Run mypy static analysis.
     """
-    context.run("mypy --strict")
+    context.run("mypy function_pipe/core --strict")
 
 
 @invoke.task

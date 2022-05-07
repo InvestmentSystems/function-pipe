@@ -6,7 +6,7 @@ import functools
 import types
 import unittest
 
-import function_pipe as fpn
+from function_pipe.core import function_pipe as fpn  # pylint: disable=E0401
 
 
 class TestUnit(unittest.TestCase):
