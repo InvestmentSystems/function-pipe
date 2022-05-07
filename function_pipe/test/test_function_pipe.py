@@ -2,7 +2,7 @@
 # pylint: disable=invalid-sequence-index, missing-kwoa, unsubscriptable-object
 # pylint: disable=no-value-for-parameter, invalid-unary-operand-type
 # pylint: disable=pointless-string-statement, pointless-statement
-# pylint: disable=unexpected-line-ending-format
+# pylint: disable=C0328
 import functools
 import types
 import unittest

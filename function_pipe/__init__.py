@@ -1,3 +1,4 @@
+# pylint: disable=C0328
 # pylint: disable=W0614
 
 from function_pipe.core.function_pipe import *

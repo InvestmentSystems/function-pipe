@@ -1,3 +1,4 @@
+# pylint: disable=C0328
 """
 function_pipe.py
 
@@ -8,7 +9,6 @@ Authors: Christopher Ariza, Max Moroz, Charles Burkland
 Common usage:
 import function_pipe as fpn
 """
-# pylint: disable=unexpected-line-ending-format
 import enum
 import functools
 import inspect
