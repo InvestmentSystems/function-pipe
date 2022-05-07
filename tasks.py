@@ -74,7 +74,7 @@ def quality(context):
 @invoke.task
 def isort(context, check=False):
     """Sort imports."""
-    cmd = "isort function_pipe"
+    cmd = "isort function_pipe/core function_pipe/test doc/"
     if check:
         cmd += " --check"
     context.run(cmd, echo=True, pty=True)
@@ -87,7 +87,7 @@ def black(context, check=False):
     if check:
         args.append("--check")
 
-    cmd = "black function_pipe"
+    cmd = "black function_pipe/core function_pipe/test doc/"
     if check:
         cmd += " --check"
     context.run(cmd, echo=True, pty=True)
