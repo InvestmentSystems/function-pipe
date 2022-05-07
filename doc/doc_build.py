@@ -21,4 +21,5 @@ if __name__ == "__main__":
     status = main(args)
 
     import webbrowser
+
     webbrowser.open(os.path.join(build_dir, "index.html"))

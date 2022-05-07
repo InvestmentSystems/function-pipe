@@ -34,7 +34,7 @@ extensions = [
     # "sphinxcontrib.jinja",
     # "matplotlib.sphinxext.only_directives",
     # "matplotlib.sphinxext.plot_directive",
-    #"sphinx.ext.autosectionlabel",
+    # "sphinx.ext.autosectionlabel",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -123,14 +123,15 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-(
-    "index",
-    "function-pipe",
-    "function-pipe Documentation",
-    "Christopher Ariza",
-    "function-pipe",
-    "One line description of project.",
-    "Miscellaneous"),
+    (
+        "index",
+        "function-pipe",
+        "function-pipe Documentation",
+        "Christopher Ariza",
+        "function-pipe",
+        "One line description of project.",
+        "Miscellaneous",
+    ),
 ]
 
 copybutton_selector = "div.copy-button pre"
