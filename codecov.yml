@@ -1,9 +1,7 @@
 codecov:
   require_ci_to_pass: no
 ignore:
-  - "static_frame/performance/.*"
-  - "static_frame/test/.*"
-  - "static_frame/core/display_visidata.py"
+  - "function_pipe/test/.*"
 coverage:
   precision: 2
   round: down
