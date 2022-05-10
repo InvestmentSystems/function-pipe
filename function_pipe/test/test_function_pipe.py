@@ -144,7 +144,9 @@ class TestUnit(unittest.TestCase):
     def test_methods_defined_on_classes(self):
 
         uno_mismo_pipe_node = functools.partial(fpn.pipe_node, self_keyword="uno_mismo")
-        uno_mismo_pipe_node_factory = functools.partial(fpn.pipe_node_factory, self_keyword="uno_mismo")
+        uno_mismo_pipe_node_factory = functools.partial(
+            fpn.pipe_node_factory, self_keyword="uno_mismo"
+        )
 
         class C:
             STATE = "C class state"
@@ -396,10 +398,10 @@ class TestUnit(unittest.TestCase):
             D.classmethod_node(cls="re-provided", **{fpn.PN_INPUT: pni})
 
         with self.assertRaises(TypeError):
-            d.self_node(self="re-provided", **{fpn.PN_INPUT: pni})
+            d.self_node(self="re-provided", **{fpn.PN_INPUT: pni})  # type: ignore
 
         with self.assertRaises(ValueError):
-            d.uno_mismo_node(uno_mismo="re-provided", **{fpn.PN_INPUT: pni})
+            d.uno_mismo_node(uno_mismo="re-provided", **{fpn.PN_INPUT: pni})  # type: ignore
 
     def test_bound_and_unbound_pipe_nodes(self):
         @fpn.pipe_node
