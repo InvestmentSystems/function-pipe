@@ -398,10 +398,14 @@ class TestUnit(unittest.TestCase):
             D.classmethod_node(cls="re-provided", **{fpn.PN_INPUT: pni})
 
         with self.assertRaises(TypeError):
-            d.self_node(self="re-provided", **{fpn.PN_INPUT: pni})  # type: ignore
+            d.self_node(  # pylint: disable=redundant-keyword-arg)
+                self="re-provided", **{fpn.PN_INPUT: pni}
+            )
 
         with self.assertRaises(ValueError):
-            d.uno_mismo_node(uno_mismo="re-provided", **{fpn.PN_INPUT: pni})  # type: ignore
+            d.uno_mismo_node(  # pylint: disable=redundant-keyword-arg)
+                uno_mismo="re-provided", **{fpn.PN_INPUT: pni}
+            )
 
     def test_bound_and_unbound_pipe_nodes(self):
         @fpn.pipe_node
