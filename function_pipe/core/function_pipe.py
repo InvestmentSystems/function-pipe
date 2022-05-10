@@ -877,7 +877,7 @@ def pipe_node_factory(
     >>>     def método(uno_mismo, pn_input, valor_anterior, a, *, b):
     >>>         pass
     >>> ...
-    >>> Ejemplo().método(1, b=2) # This is now a PipeNode!
+    >>> Ejemplo().método(1, b=2) # Esto ahora es un PipeNode!
 
     Args:
         - ``key_positions``: either a single callable, or a list of keywords that will be positionally bound to the decorated function.
