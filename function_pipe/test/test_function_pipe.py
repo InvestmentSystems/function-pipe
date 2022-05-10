@@ -142,6 +142,10 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(27 * 2 + 8 - 2, (foo6(8) | bar6(2))[27])
 
     def test_methods_defined_on_classes(self):
+
+        uno_mismo_pipe_node = functools.partial(fpn.pipe_node, self_keyword="uno_mismo")
+        uno_mismo_pipe_node_factory = functools.partial(fpn.pipe_node_factory, self_keyword="uno_mismo")
+
         class C:
             STATE = "C class state"
 
@@ -151,19 +155,27 @@ class TestUnit(unittest.TestCase):
             # classmethods
 
             @fpn.classmethod_pipe_node
-            def cls_node(cls, **kwargs):
+            def classmethod_node(cls, **kwargs):
                 return cls.STATE
 
+            @fpn.classmethod_pipe_node()
+            def classmethod_node_bind_empty(cls):
+                return "empty", cls.STATE
+
             @fpn.classmethod_pipe_node(fpn.PN_INPUT)
-            def cls_node_bind(cls, pni):
+            def classmethod_node_bind(cls, pni):
                 return pni, cls.STATE
 
             @fpn.classmethod_pipe_node_factory
-            def cls_node_factory(cls, factory_val, **kwargs):
+            def classmethod_node_factory(cls, factory_val, **kwargs):
                 return f"{cls.__name__} factory_val='{factory_val}'"
 
+            @fpn.classmethod_pipe_node_factory()
+            def classmethod_node_factory_bind_empty(cls, factory_val):
+                return "empty", f"{cls.__name__} factory_val='{factory_val}'"
+
             @fpn.classmethod_pipe_node_factory(fpn.PN_INPUT)
-            def cls_node_factory_bind(cls, pni, factory_val):
+            def classmethod_node_factory_bind(cls, pni, factory_val):
                 return pni, f"{cls.__name__} factory_val='{factory_val}'"
 
             # staticmethods
@@ -172,6 +184,10 @@ class TestUnit(unittest.TestCase):
             def staticmethod_node(**kwargs):
                 return "STATIC"
 
+            @fpn.staticmethod_pipe_node()
+            def staticmethod_node_bind_empty():
+                return "empty", "STATIC"
+
             @fpn.staticmethod_pipe_node(fpn.PN_INPUT)
             def staticmethod_node_bind(pni):
                 return pni, "STATIC"
@@ -179,6 +195,10 @@ class TestUnit(unittest.TestCase):
             @fpn.staticmethod_pipe_node_factory
             def staticmethod_node_factory(factory_val, **kwargs):
                 return f"STATIC factory_val='{factory_val}'"
+
+            @fpn.staticmethod_pipe_node_factory()
+            def staticmethod_node_factory_bind_empty(factory_val):
+                return "empty", f"STATIC factory_val='{factory_val}'"
 
             @fpn.staticmethod_pipe_node_factory(fpn.PN_INPUT)
             def staticmethod_node_factory_bind(pni, factory_val):
@@ -190,6 +210,10 @@ class TestUnit(unittest.TestCase):
             def namespace_node(**kwargs):
                 return "NAMESPACE"
 
+            @fpn.pipe_node()
+            def namespace_node_bind_empty():
+                return "empty", "NAMESPACE"
+
             @fpn.pipe_node(fpn.PN_INPUT)
             def namespace_node_bind(pni):
                 return pni, "NAMESPACE"
@@ -197,6 +221,10 @@ class TestUnit(unittest.TestCase):
             @fpn.pipe_node_factory
             def namespace_node_factory(factory_val, **kwargs):
                 return f"NAMESPACE factory_val='{factory_val}'"
+
+            @fpn.pipe_node_factory()
+            def namespace_node_factory_bind_empty(factory_val):
+                return "empty", f"NAMESPACE factory_val='{factory_val}'"
 
             @fpn.pipe_node_factory(fpn.PN_INPUT)
             def namespace_node_factory_bind(pni, factory_val):
@@ -208,6 +236,10 @@ class TestUnit(unittest.TestCase):
             def self_node(self, **kwargs):
                 return self.state
 
+            @fpn.pipe_node()
+            def self_node_bind_empty(self):
+                return "empty", self.state
+
             @fpn.pipe_node(fpn.PN_INPUT)
             def self_node_bind(self, pni):
                 return pni, self.state
@@ -216,9 +248,39 @@ class TestUnit(unittest.TestCase):
             def self_node_factory(self, factory_val, **kwargs):
                 return f"SELF factory_val='{factory_val}'"
 
+            @fpn.pipe_node_factory()
+            def self_node_factory_bind_empty(self, factory_val):
+                return "empty", f"SELF factory_val='{factory_val}'"
+
             @fpn.pipe_node_factory(fpn.PN_INPUT)
             def self_node_factory_bind(self, pni, factory_val):
                 return pni, f"SELF factory_val='{factory_val}'"
+
+            # self with non-standard first argument_name methods
+
+            @uno_mismo_pipe_node
+            def uno_mismo_node(uno_mismo, **kwargs):
+                return uno_mismo.state
+
+            @uno_mismo_pipe_node()
+            def uno_mismo_node_bind_empty(uno_mismo):
+                return "empty", uno_mismo.state
+
+            @uno_mismo_pipe_node(fpn.PN_INPUT)
+            def uno_mismo_node_bind(uno_mismo, pni):
+                return pni, uno_mismo.state
+
+            @uno_mismo_pipe_node_factory
+            def uno_mismo_node_factory(uno_mismo, factory_val, **kwargs):
+                return f"uno_mismo factory_val='{factory_val}'"
+
+            @uno_mismo_pipe_node_factory()
+            def uno_mismo_node_factory_bind_empty(uno_mismo, factory_val):
+                return "empty", f"uno_mismo factory_val='{factory_val}'"
+
+            @uno_mismo_pipe_node_factory(fpn.PN_INPUT)
+            def uno_mismo_node_factory_bind(uno_mismo, pni, factory_val):
+                return pni, f"uno_mismo factory_val='{factory_val}'"
 
         class D(C):
             STATE = "D class state"
@@ -229,87 +291,79 @@ class TestUnit(unittest.TestCase):
         d = D("self state")
         pni = "PNI"
 
-        self.assertEqual(d.cls_node[pni], "D class state")
-        self.assertEqual(D.cls_node[pni], "D class state")
-        self.assertEqual(C.cls_node[pni], "C class state")
-        self.assertEqual(d.cls_node_bind[pni], (pni, "D class state"))
-        self.assertEqual(D.cls_node_bind[pni], (pni, "D class state"))
-        self.assertEqual(C.cls_node_bind[pni], (pni, "C class state"))
-        self.assertEqual(d.cls_node_factory("val")[pni], "D factory_val='val'")
-        self.assertEqual(D.cls_node_factory("val")[pni], "D factory_val='val'")
-        self.assertEqual(C.cls_node_factory("val")[pni], "C factory_val='val'")
-        self.assertEqual(
-            d.cls_node_factory_bind("val")[pni], (pni, "D factory_val='val'")
-        )
-        self.assertEqual(
-            D.cls_node_factory_bind("val")[pni], (pni, "D factory_val='val'")
-        )
-        self.assertEqual(
-            C.cls_node_factory_bind("val")[pni], (pni, "C factory_val='val'")
-        )
+        # fmt: off
+        self.assertEqual(d.classmethod_node[pni], "D class state")
+        self.assertEqual(D.classmethod_node[pni], "D class state")
+        self.assertEqual(C.classmethod_node[pni], "C class state")
+        self.assertEqual(d.classmethod_node_bind_empty[pni], ("empty", "D class state"))
+        self.assertEqual(D.classmethod_node_bind_empty[pni], ("empty", "D class state"))
+        self.assertEqual(C.classmethod_node_bind_empty[pni], ("empty", "C class state"))
+        self.assertEqual(d.classmethod_node_bind[pni], (pni, "D class state"))
+        self.assertEqual(D.classmethod_node_bind[pni], (pni, "D class state"))
+        self.assertEqual(C.classmethod_node_bind[pni], (pni, "C class state"))
+        self.assertEqual(d.classmethod_node_factory("val")[pni], "D factory_val='val'")
+        self.assertEqual(D.classmethod_node_factory("val")[pni], "D factory_val='val'")
+        self.assertEqual(C.classmethod_node_factory("val")[pni], "C factory_val='val'")
+        self.assertEqual(d.classmethod_node_factory_bind_empty("val")[pni], ("empty", "D factory_val='val'"))
+        self.assertEqual(D.classmethod_node_factory_bind_empty("val")[pni], ("empty", "D factory_val='val'"))
+        self.assertEqual(C.classmethod_node_factory_bind_empty("val")[pni], ("empty", "C factory_val='val'"))
+        self.assertEqual(d.classmethod_node_factory_bind("val")[pni], (pni, "D factory_val='val'"))
+        self.assertEqual(D.classmethod_node_factory_bind("val")[pni], (pni, "D factory_val='val'"))
+        self.assertEqual(C.classmethod_node_factory_bind("val")[pni], (pni, "C factory_val='val'"))
 
         self.assertEqual(d.staticmethod_node[pni], "STATIC")
         self.assertEqual(D.staticmethod_node[pni], "STATIC")
         self.assertEqual(C.staticmethod_node[pni], "STATIC")
+        self.assertEqual(d.staticmethod_node_bind_empty[pni], ("empty", "STATIC"))
+        self.assertEqual(D.staticmethod_node_bind_empty[pni], ("empty", "STATIC"))
+        self.assertEqual(C.staticmethod_node_bind_empty[pni], ("empty", "STATIC"))
         self.assertEqual(d.staticmethod_node_bind[pni], (pni, "STATIC"))
         self.assertEqual(D.staticmethod_node_bind[pni], (pni, "STATIC"))
         self.assertEqual(C.staticmethod_node_bind[pni], (pni, "STATIC"))
-        self.assertEqual(
-            d.staticmethod_node_factory("val")[pni], "STATIC factory_val='val'"
-        )
-        self.assertEqual(
-            D.staticmethod_node_factory("val")[pni], "STATIC factory_val='val'"
-        )
-        self.assertEqual(
-            C.staticmethod_node_factory("val")[pni], "STATIC factory_val='val'"
-        )
-        self.assertEqual(
-            d.staticmethod_node_factory_bind("val")[pni],
-            (pni, "STATIC factory_val='val'"),
-        )
-        self.assertEqual(
-            D.staticmethod_node_factory_bind("val")[pni],
-            (pni, "STATIC factory_val='val'"),
-        )
-        self.assertEqual(
-            C.staticmethod_node_factory_bind("val")[pni],
-            (pni, "STATIC factory_val='val'"),
-        )
+        self.assertEqual(d.staticmethod_node_factory("val")[pni], "STATIC factory_val='val'")
+        self.assertEqual(D.staticmethod_node_factory("val")[pni], "STATIC factory_val='val'")
+        self.assertEqual(C.staticmethod_node_factory("val")[pni], "STATIC factory_val='val'")
+        self.assertEqual(d.staticmethod_node_factory_bind_empty("val")[pni], ("empty", "STATIC factory_val='val'"))
+        self.assertEqual(D.staticmethod_node_factory_bind_empty("val")[pni], ("empty", "STATIC factory_val='val'"))
+        self.assertEqual(C.staticmethod_node_factory_bind_empty("val")[pni], ("empty", "STATIC factory_val='val'"))
+        self.assertEqual(d.staticmethod_node_factory_bind("val")[pni], (pni, "STATIC factory_val='val'"))
+        self.assertEqual(D.staticmethod_node_factory_bind("val")[pni], (pni, "STATIC factory_val='val'"))
+        self.assertEqual(C.staticmethod_node_factory_bind("val")[pni], (pni, "STATIC factory_val='val'"))
 
         self.assertEqual(d.namespace_node[pni], "NAMESPACE")
         self.assertEqual(D.namespace_node[pni], "NAMESPACE")
         self.assertEqual(C.namespace_node[pni], "NAMESPACE")
+
         self.assertEqual(d.namespace_node_bind[pni], (pni, "NAMESPACE"))
         self.assertEqual(D.namespace_node_bind[pni], (pni, "NAMESPACE"))
         self.assertEqual(C.namespace_node_bind[pni], (pni, "NAMESPACE"))
-        self.assertEqual(
-            d.namespace_node_factory("val")[pni], "NAMESPACE factory_val='val'"
-        )
-        self.assertEqual(
-            D.namespace_node_factory("val")[pni], "NAMESPACE factory_val='val'"
-        )
-        self.assertEqual(
-            C.namespace_node_factory("val")[pni], "NAMESPACE factory_val='val'"
-        )
-        self.assertEqual(
-            d.namespace_node_factory_bind("val")[pni],
-            (pni, "NAMESPACE factory_val='val'"),
-        )
-        self.assertEqual(
-            D.namespace_node_factory_bind("val")[pni],
-            (pni, "NAMESPACE factory_val='val'"),
-        )
-        self.assertEqual(
-            C.namespace_node_factory_bind("val")[pni],
-            (pni, "NAMESPACE factory_val='val'"),
-        )
+        self.assertEqual(d.namespace_node_bind_empty[pni], ("empty", "NAMESPACE"))
+        self.assertEqual(D.namespace_node_bind_empty[pni], ("empty", "NAMESPACE"))
+        self.assertEqual(C.namespace_node_bind_empty[pni], ("empty", "NAMESPACE"))
+        self.assertEqual(d.namespace_node_factory("val")[pni], "NAMESPACE factory_val='val'")
+        self.assertEqual(D.namespace_node_factory("val")[pni], "NAMESPACE factory_val='val'")
+        self.assertEqual(C.namespace_node_factory("val")[pni], "NAMESPACE factory_val='val'")
+        self.assertEqual(d.namespace_node_factory_bind_empty("val")[pni], ("empty", "NAMESPACE factory_val='val'"))
+        self.assertEqual(D.namespace_node_factory_bind_empty("val")[pni], ("empty", "NAMESPACE factory_val='val'"))
+        self.assertEqual(C.namespace_node_factory_bind_empty("val")[pni], ("empty", "NAMESPACE factory_val='val'"))
+        self.assertEqual(d.namespace_node_factory_bind("val")[pni], (pni, "NAMESPACE factory_val='val'"))
+        self.assertEqual(D.namespace_node_factory_bind("val")[pni], (pni, "NAMESPACE factory_val='val'"))
+        self.assertEqual(C.namespace_node_factory_bind("val")[pni], (pni, "NAMESPACE factory_val='val'"))
 
         self.assertEqual(d.self_node[pni], "D self state")
+        self.assertEqual(d.self_node_bind_empty[pni], ("empty", "D self state"))
         self.assertEqual(d.self_node_bind[pni], (pni, "D self state"))
         self.assertEqual(d.self_node_factory("val")[pni], "SELF factory_val='val'")
-        self.assertEqual(
-            d.self_node_factory_bind("val")[pni], (pni, "SELF factory_val='val'")
-        )
+        self.assertEqual(d.self_node_factory_bind_empty("val")[pni], ("empty", "SELF factory_val='val'"))
+        self.assertEqual(d.self_node_factory_bind("val")[pni], (pni, "SELF factory_val='val'"))
+
+        self.assertEqual(d.uno_mismo_node[pni], "D self state")
+        self.assertEqual(d.uno_mismo_node_bind_empty[pni], ("empty", "D self state"))
+        self.assertEqual(d.uno_mismo_node_bind[pni], (pni, "D self state"))
+        self.assertEqual(d.uno_mismo_node_factory("val")[pni], "uno_mismo factory_val='val'")
+        self.assertEqual(d.uno_mismo_node_factory_bind_empty("val")[pni], ("empty", "uno_mismo factory_val='val'"))
+        self.assertEqual(d.uno_mismo_node_factory_bind("val")[pni], (pni, "uno_mismo factory_val='val'"))
+        # fmt: on
 
         """Custom ValueError indicating an unbound self-method was called without an instance"""
         with self.assertRaises(ValueError):
@@ -336,6 +390,16 @@ class TestUnit(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             C.self_node_factory_bind("val")[pni]
+
+        """Errors about re-providing bound positional arguments like self/cls"""
+        with self.assertRaises(ValueError):
+            D.classmethod_node(cls="re-provided", **{fpn.PN_INPUT: pni})
+
+        with self.assertRaises(TypeError):
+            d.self_node(self="re-provided", **{fpn.PN_INPUT: pni})
+
+        with self.assertRaises(ValueError):
+            d.uno_mismo_node(uno_mismo="re-provided", **{fpn.PN_INPUT: pni})
 
     def test_bound_and_unbound_pipe_nodes(self):
         @fpn.pipe_node

@@ -734,7 +734,7 @@ class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
         self: PipeNodeDescriptorT,
         core_callable: tp.Callable,
         core_handler: HandlerT,
-        key_positions: tp.Tuple[KeyPostion, ...] = (),
+        key_positions: tp.Optional[tp.Tuple[KeyPostion, ...]] = None,
     ) -> None:
         self.core_callable = core_callable
         self.core_handler = core_handler
@@ -749,7 +749,7 @@ class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
         Returns a callable that will be bound to the instance/owner, and then passed along the pipeline.
         """
         core_callable: tp.Callable = self.core_callable.__get__(instance, owner)  # type: ignore
-        if self.key_positions:
+        if self.key_positions is not None:
             core_callable = _pipe_kwarg_bind(*self.key_positions)(core_callable)
         return self.core_handler(core_callable)
 
@@ -795,7 +795,9 @@ def _descriptor_factory(
     *key_positions: KeyPostion,
     decorator: tp.Callable,
     core_decorator: HandlerT,
+    emulator: tp.Any,
 ) -> tp.Any:
+
     has_key_positions = _has_key_positions(*key_positions)
 
     class Descriptor:  # pylint: disable=too-few-public-methods
@@ -803,9 +805,14 @@ def _descriptor_factory(
             self._func = func
 
         def __get__(self, instance: tp.Any, owner: tp.Any) -> tp.Callable:
+
+            assert emulator is staticmethod or emulator is classmethod, emulator
+
             # Prefer this to partialing for prettier func reprs
             @functools.wraps(self._func)
             def func(*args: tp.Any, **kwargs: tp.Any) -> tp.Any:
+                if emulator is staticmethod:
+                    return self._func(*args, **kwargs)
                 return self._func(owner, *args, **kwargs)
 
             if has_key_positions:
@@ -847,13 +854,30 @@ def pipe_node_factory(
     >>> ...
     >>> func(a=1, b=2) # This is now a PipeNode!
 
-    >>> @fpn.pipe_node_factory(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
-    >>> def func(pni, prev_val, a, *, b):
-    >>>     # pni will be given the fpn.PN_INPUT from the pipeline
-    >>>     # prev will be given the fpn.PREDECESSOR_RETURN from the pipeline
+    >>> @pipe_node_factory(PN_INPUT, PREDECESSOR_RETURN)
+    >>> def func(pn_input, previous_value, a, *, b):
+    >>>     # pn_input will be given the PN_INPUT from the pipeline
+    >>>     # prev will be given the PREDECESSOR_RETURN from the pipeline
     >>>     pass
     >>> ...
     >>> func(1, b=2) # This is now a PipeNode!
+
+    >>> class Example:
+    >>>     @pipe_node_factory(PN_INPUT, PREDECESSOR_RETURN)
+    >>>     def method(self, pn_input, previous_value, a, *, b):
+    >>>         pass
+    >>> ...
+    >>> Example().method(1, b=2) # This is now a PipeNode!
+
+    >>> from functools import partial
+    >>> español_pipe_node = partial(pipe_node, self_keyword="uno_mismo")
+    >>> ...
+    >>> class Ejemplo:
+    >>>     @pipe_node_factory(PN_INPUT, PREDECESSOR_RETURN)
+    >>>     def método(uno_mismo, pn_input, valor_anterior, a, *, b):
+    >>>         pass
+    >>> ...
+    >>> Ejemplo().método(1, b=2) # This is now a PipeNode!
 
     Args:
         - ``key_positions``: either a single callable, or a list of keywords that will be positionally bound to the decorated function.
@@ -982,9 +1006,21 @@ def pipe_node(
     >>> def func():
     >>>     pass
 
-    >>> @pipe_node(fpn.PN_INPUT)
+    >>> @pipe_node(PN_INPUT)
     >>> def func(pn_input):
     >>>     pass
+
+    >>> class Example:
+    >>>     @pipe_node(PN_INPUT)
+    >>>     def method(self, pn_input):
+    >>>         pass
+
+    >>> from functools import partial
+    >>> español_pipe_node = partial(pipe_node, self_keyword="uno_mismo")
+    >>> class Ejemplo:
+    >>>     @español_pipe_node(PN_INPUT)
+    >>>     def método(uno_mismo, pn_input):
+    >>>         pass
 
     Args:
         - ``key_positions``: either a single callable, or a list of keywords that will be positionally bound to the decorated function.
@@ -1028,28 +1064,31 @@ def classmethod_pipe_node_factory(
     >>> def func(cls, a, b, **kwargs):
     >>>     pass
     >>> ...
-    >>> Class.func(1, 2) # This is now a PipeNode!
+    >>> SomeClass.func(1, 2) # This is now a PipeNode!
 
     >>> @classmethod_pipe_node_factory()
     >>> def func(cls, *, a, b):
     >>>     pass
     >>> ...
-    >>> Class.func(a=1, b=2) # This is now a PipeNode!
+    >>> SomeClass.func(a=1, b=2) # This is now a PipeNode!
 
-    >>> @fpn.classmethod_pipe_node_factory(fpn.PN_INPUT, fpn.PREDECESSOR_RETURN)
-    >>> def func(cls, pni, prev_val, a, *, b):
-    >>>     # pni will be given the fpn.PN_INPUT from the pipeline
-    >>>     # prev will be given the fpn.PREDECESSOR_RETURN from the pipeline
+    >>> @classmethod_pipe_node_factory(PN_INPUT, PREDECESSOR_RETURN)
+    >>> def func(cls, pn_input, previous_value, a, *, b):
+    >>>     # ``pn_input`` will be given the PN_INPUT from the pipeline
+    >>>     # ``previous_value`` will be given the PREDECESSOR_RETURN from the pipeline
     >>>     pass
     >>> ...
-    >>> Class.func(1, b=2) # This is now a PipeNode!
+    >>> SomeClass.func(1, b=2) # This is now a PipeNode!
 
     Args:
         - ``key_positions``: either a single callable, or a list of keywords that will be positionally bound to the decorated function.
         - ``core_decorator``: a decorator that will be applied to the core_callable. This is typically a logger. By default, it will print to stdout.
     """
     return _descriptor_factory(
-        *key_positions, decorator=pipe_node_factory, core_decorator=core_decorator
+        *key_positions,
+        decorator=pipe_node_factory,
+        core_decorator=core_decorator,
+        emulator=classmethod,
     )
 
 
@@ -1078,7 +1117,7 @@ def classmethod_pipe_node(
     >>> def func(cls):
     >>>     pass
 
-    >>> @classmethod_pipe_node(fpn.PN_INPUT)
+    >>> @classmethod_pipe_node(PN_INPUT)
     >>> def func(cls, pn_input):
     >>>     pass
 
@@ -1087,12 +1126,100 @@ def classmethod_pipe_node(
         - ``core_decorator``: a decorator that will be applied to the core_callable. This is typically a logger. By default, it will print to stdout.
     """
     return _descriptor_factory(
-        *key_positions, decorator=pipe_node, core_decorator=core_decorator
+        *key_positions,
+        decorator=pipe_node,
+        core_decorator=core_decorator,
+        emulator=classmethod,
     )
 
 
-staticmethod_pipe_node_factory = pipe_node_factory
-staticmethod_pipe_node = pipe_node
+def staticmethod_pipe_node_factory(
+    *key_positions: KeyPostion, core_decorator: HandlerT = _core_logger
+) -> tp.Callable:
+    """
+    Decorates a function to become a staticmethod pipe node factory, that when given *expression-level* arguments, will return a ``PipeNode``
+
+    This can either be used as a decorator, or a decorator factory, similar to ``functools.lru_cache``.
+
+    This is a convenience method, that is the mental equivalent to this pseudo-code:
+
+    >>> @staticmethod
+    >>> @pipe_node_factory(...)
+    >>> def func(...)
+
+    **Examples**:
+
+    >>> @staticmethod_pipe_node_factory
+    >>> def func(a, b, **kwargs):
+    >>>     pass
+    >>> ...
+    >>> SomeClass.func(1, 2) # This is now a PipeNode!
+
+    >>> @staticmethod_pipe_node_factory()
+    >>> def func(*, a, b):
+    >>>     pass
+    >>> ...
+    >>> SomeClass.func(a=1, b=2) # This is now a PipeNode!
+
+    >>> @staticmethod_pipe_node_factory(PN_INPUT, PREDECESSOR_RETURN)
+    >>> def func(pn_input, previous_value, a, *, b):
+    >>>     # ``pn_input`` will be given the PN_INPUT from the pipeline
+    >>>     # ``previous_value`` will be given the PREDECESSOR_RETURN from the pipeline
+    >>>     pass
+    >>> ...
+    >>> SomeClass.func(1, b=2) # This is now a PipeNode!
+
+    Args:
+        - ``key_positions``: either a single callable, or a list of keywords that will be positionally bound to the decorated function.
+        - ``core_decorator``: a decorator that will be applied to the core_callable. This is typically a logger. By default, it will print to stdout.
+    """
+    return _descriptor_factory(
+        *key_positions,
+        decorator=pipe_node_factory,
+        core_decorator=core_decorator,
+        emulator=staticmethod,
+    )
+
+
+def staticmethod_pipe_node(
+    *key_positions: KeyPostion,
+    core_decorator: HandlerT = _core_logger,
+) -> tp.Union[tp.Callable, PipeNode]:
+    """
+    Decorates a function to become a staticmethod ``PipeNode`` that takes no expression-level args.
+
+    This can either be used as a decorator, or a decorator factory, similar to ``functools.lru_cache``.
+
+    This is a convenience method, that is the mental equivalent to this pseudo-code:
+
+    >>> @staticmethod
+    >>> @pipe_node(...)
+    >>> def func(...)
+
+    **Examples**:
+
+    >>> @staticmethod_pipe_node
+    >>> def func(**kwargs):
+    >>>     pass
+
+    >>> @staticmethod_pipe_node()
+    >>> def func():
+    >>>     pass
+
+    >>> @staticmethod_pipe_node(PN_INPUT)
+    >>> def func(pn_input):
+    >>>     pass
+
+    Args:
+        - ``key_positions``: either a single callable, or a list of keywords that will be positionally bound to the decorated function.
+        - ``core_decorator``: a decorator that will be applied to the core_callable. This is typically a logger. By default, it will print to stdout.
+    """
+    return _descriptor_factory(
+        *key_positions,
+        decorator=pipe_node,
+        core_decorator=core_decorator,
+        emulator=staticmethod,
+    )
 
 
 # -------------------------------------------------------------------------------
@@ -1128,20 +1255,20 @@ class PipeNodeInput:
 
 
 @pipe_node_factory(PN_INPUT, PREDECESSOR_RETURN)
-def store(pni: PipeNodeInput, ret_val: tp.Any, label: str) -> tp.Any:
+def store(pn_input: PipeNodeInput, previous_value: tp.Any, label: str) -> tp.Any:
     """
-    Store ``ret_val`` (the value returned from the previous ``PipeNode``) to ``pni`` under ``label``. Forward ``ret_val``.
+    Store ``previous_value`` (the value returned from the previous ``PipeNode``) to ``pn_input`` under ``label``. Forward ``previous_value``.
     """
-    pni.store(label, ret_val)
-    return ret_val
+    pn_input.store(label, previous_value)
+    return previous_value
 
 
 @pipe_node_factory(PN_INPUT)
-def recall(pni: PipeNodeInput, label: str) -> tp.Any:
+def recall(pn_input: PipeNodeInput, label: str) -> tp.Any:
     """
-    Recall ``label`` from ``pni```` and return it. Can raise an ``KeyError``.
+    Recall ``label`` from ``pn_input```` and return it. Can raise an ``KeyError``.
     """
-    return pni.recall(label)
+    return pn_input.recall(label)
 
 
 @pipe_node_factory()

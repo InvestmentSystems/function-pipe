@@ -67,6 +67,9 @@ exclude_patterns = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"
 
+# -- Options for autodoc -------------------------------------------------------
+add_module_names = False
+
 # -- Options for HTML output ---------------------------------------------------
 
 html_theme = "sphinx_rtd_theme"
