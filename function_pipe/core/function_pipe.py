@@ -258,7 +258,10 @@ class FunctionNode:
         """
         Call the wrapped function with args and kwargs.
         """
-        return self._function(*args, **kwargs)
+        try:
+            return self._function(*args, **kwargs)
+        except BaseException as e:
+            raise _exception_with_cleaned_tb(e) from None
 
     def __str__(self: FN) -> str:
         return f"<FN: {_repr(self)}>"
@@ -492,6 +495,39 @@ PREDECESSOR_PN_SET = frozenset((PREDECESSOR_PN,))
 PIPE_NODE_KWARGS = frozenset((PREDECESSOR_RETURN, PREDECESSOR_PN, PN_INPUT))
 
 
+def _from_module(some_tb: types.TracebackType) -> bool:
+    return some_tb.tb_frame.f_code.co_filename == __file__
+
+
+def _exception_with_cleaned_tb(original_exception: BaseException) -> BaseException:
+    """
+    Return back a new exception, where the top frames from the function_pipe module are removed.
+    """
+    tb = original_exception.__traceback__
+    assert tb is not None
+    previous_tb = None
+
+    assert _from_module(tb)
+
+    while True:
+        previous_tb = tb.tb_next
+
+        # If `previous_tb` is None, it means everything from the stack came from this module.
+        # Use the original exception
+        if previous_tb is None:
+            tb = original_exception.__traceback__
+            break
+
+        # If `previous_tb` originates from outside the module, it means we are done looking
+        if not _from_module(previous_tb):
+            break
+
+        # We are still observing frames from inside the module; keep looking
+        tb = previous_tb
+
+    return type(original_exception)(*original_exception.args).with_traceback(previous_tb)
+
+
 class PipeNode(FunctionNode):
     """
     This encapsulates the node that will be used in a pipeline.
@@ -615,15 +651,20 @@ class PipeNode(FunctionNode):
         Call the wrapped function with args and kwargs.
         """
         if self._call_state is PipeNode.State.FACTORY:
-            return self._function(*args, **kwargs)
+            try:
+                return self._function(*args, **kwargs)
+            except BaseException as e:
+                raise _exception_with_cleaned_tb(e) from None
 
         if args or set(kwargs) - PIPE_NODE_KWARGS != set():
             raise ValueError(
-                "Cannot call a PipeNode with args or non-pipeline kwargs! Please refer to the documentation for proper usage."
+                "Cannot call a PipeNode with args or non-pipeline kwargs! Perhaps you meant to use @pipe_node_factory?"
             )
 
-        return self._function(**kwargs)
-
+        try:
+            return self._function(**kwargs)
+        except BaseException as e:
+            raise _exception_with_cleaned_tb(e) from None
 
 # -------------------------------------------------------------------------------
 # decorator utilities
@@ -829,7 +870,6 @@ def _descriptor_factory(
 # -------------------------------------------------------------------------------
 # decorators
 
-
 def pipe_node_factory(
     *key_positions: KeyPostion,
     core_decorator: HandlerT = _core_logger,
@@ -889,7 +929,8 @@ def pipe_node_factory(
         decorated_core_callable = core_decorator(core_callable)
 
         def factory_f(*f_args: tp.Any, **f_kwargs: tp.Any) -> PipeNode:
-            """This is the function returned by the decorator, used to create the PipeNode that resides in expressions after being called with arguments.
+            """
+            This is the function returned by the decorator, used to create the PipeNode that resides in expressions after being called with arguments.
 
             f_args and f_kwargs are passed to the core_callable; if f_args or f_kwargs are PipeNode instances, they will be called with the processing args and kwargs (including PN_INPUT), either from process_f or (if innermost) from expression args.
             """
@@ -899,7 +940,8 @@ def pipe_node_factory(
                 )
 
             def expression_f(**e_kwargs: tp.Any) -> PipeNode:
-                """This is the PipeNode that resides in expressions prior to `|` operator evalation.
+                """
+                This is the PipeNode that resides in expressions prior to `|` operator evalation.
                 When called with `|`, the predecessor is passed is in e_kwargs as PREDECESSOR_PN. In this usage the e_args will always be empty.
 
                 When in the innermost position, expression_f is never called with `|` but with the PN_INPUT; this sitation is identified and the core_callable is called immediately.
