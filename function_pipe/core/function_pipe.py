@@ -505,28 +505,27 @@ def _exception_with_cleaned_tb(original_exception: BaseException) -> BaseExcepti
     """
     tb = original_exception.__traceback__
     assert tb is not None
-    previous_tb = None
+    tb_next = None
 
     assert _from_module(tb)
 
     while True:
-        previous_tb = tb.tb_next
+        tb_next = tb.tb_next
 
-        # If `previous_tb` is None, it means everything from the stack came from this module.
+        # If `tb_next` is None, it means everything from the stack came from this module.
         # Use the original exception
-        if previous_tb is None:
-            tb = original_exception.__traceback__
-            break
+        if tb_next is None:
+            return original_exception
 
-        # If `previous_tb` originates from outside the module, it means we are done looking
-        if not _from_module(previous_tb):
+        # If `tb_next` originates from outside the module, it means we are done looking
+        if not _from_module(tb_next):
             break
 
         # We are still observing frames from inside the module; keep looking
-        tb = previous_tb
+        tb = tb_next
 
     return type(original_exception)(*original_exception.args).with_traceback(
-        previous_tb
+        tb_next
     )
 
 
