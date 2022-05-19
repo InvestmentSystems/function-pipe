@@ -525,7 +525,9 @@ def _exception_with_cleaned_tb(original_exception: BaseException) -> BaseExcepti
         # We are still observing frames from inside the module; keep looking
         tb = previous_tb
 
-    return type(original_exception)(*original_exception.args).with_traceback(previous_tb)
+    return type(original_exception)(*original_exception.args).with_traceback(
+        previous_tb
+    )
 
 
 class PipeNode(FunctionNode):
@@ -665,6 +667,7 @@ class PipeNode(FunctionNode):
             return self._function(**kwargs)
         except BaseException as e:
             raise _exception_with_cleaned_tb(e) from None
+
 
 # -------------------------------------------------------------------------------
 # decorator utilities
@@ -869,6 +872,7 @@ def _descriptor_factory(
 
 # -------------------------------------------------------------------------------
 # decorators
+
 
 def pipe_node_factory(
     *key_positions: KeyPostion,
