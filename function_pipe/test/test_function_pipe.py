@@ -1117,9 +1117,9 @@ class TestUnit(unittest.TestCase):
         m_classmethod_c = classmethod(classmethod_func)
         m_staticmethod_c = staticmethod(staticmethod_func)
 
-        func_self = functools.partial(fpn._is_unbound_self_method, self_keyword="self")
+        func_self = functools.partial(fpn.is_unbound_self_method, self_keyword="self")
         func_uno_mismo = functools.partial(
-            fpn._is_unbound_self_method, self_keyword="uno_mismo"
+            fpn.is_unbound_self_method, self_keyword="uno_mismo"
         )
 
         self.assertTrue(func_self(TestClass.m_self))

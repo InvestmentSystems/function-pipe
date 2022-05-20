@@ -43,3 +43,6 @@ function_pipe
     Broadcasts ``pns``, and returns the result of ``pns[-1]``
 
     Since ``pns`` are all ``PipeNodes``, they will all be evaluated before passed in as values to this function.
+
+.. autofunction:: pretty_repr
+.. autofunction:: is_unbound_self_method

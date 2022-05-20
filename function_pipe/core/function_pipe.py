@@ -150,14 +150,17 @@ def _format_expression(f: tp.Any) -> str:
     """
     `f` could be either a single argument, or an expression of arguments. If it is the latter, wrap in parenthesis
     """
-    repr_str = _repr(f)
+    repr_str = pretty_repr(f)
     if _contains_expression(repr_str):
         return f"({repr_str})"
     return repr_str
 
 
-def _repr(f: tp.Any) -> str:
-    """Provide a string representation of the FN, recursively representing defined arguments."""
+def pretty_repr(f: tp.Any) -> str:
+    """
+    Provide a pretty string representation of a FN, PN, or anything.
+    If the object is a FN or PN, it will recursively represent any nested FNs/PNs.
+    """
 
     def get_function_name(f: tp.Any) -> str:
         """Get a string representation of the callable, or its code if it is a lambda. In some cases, `f` may not be function, so just return a string."""
@@ -182,7 +185,7 @@ def _repr(f: tp.Any) -> str:
             ), "Unary FunctionNodes must only have one doc_arg."
 
             if unary_op == "abs":
-                arg = _repr(f._doc_args[0])
+                arg = pretty_repr(f._doc_args[0])
                 return f"{unary_op}({arg})"
 
             arg = _format_expression(f._doc_args[0])
@@ -206,7 +209,7 @@ def _repr(f: tp.Any) -> str:
         sig_str = "("
 
         if f._doc_args:
-            sig_str += ",".join((str(_repr(v)) for v in f._doc_args))
+            sig_str += ",".join((str(pretty_repr(v)) for v in f._doc_args))
 
         if f._doc_kwargs:
             if f._doc_args:
@@ -214,9 +217,9 @@ def _repr(f: tp.Any) -> str:
 
             for k, v in f._doc_kwargs.items():
                 if k == PREDECESSOR_PN:
-                    predecessor = _repr(v)
+                    predecessor = pretty_repr(v)
                 else:
-                    sig_str += (k + "=" + str(_repr(v))) + ","
+                    sig_str += (k + "=" + str(pretty_repr(v))) + ","
 
         sig_str = sig_str.rstrip(",") + ")"
 
@@ -298,10 +301,10 @@ class FunctionNode:
             raise _exception_with_cleaned_tb(e) from None
 
     def __str__(self: FN) -> str:
-        return f"<FN: {_repr(self)}>"
+        return f"<FN: {pretty_repr(self)}>"
 
     def __repr__(self: FN) -> str:
-        return f"<FN: {_repr(self)}>"
+        return f"<FN: {pretty_repr(self)}>"
 
     def partial(self: FN, *args: tp.Any, **kwargs: tp.Any) -> "FunctionNode":
         """
@@ -574,13 +577,13 @@ class PipeNode(FunctionNode):
 
     def __str__(self: PN) -> str:
         if self._call_state is PipeNode.State.FACTORY:
-            return f"<PNF: {_repr(self)}>"
-        return f"<PN: {_repr(self)}>"
+            return f"<PNF: {pretty_repr(self)}>"
+        return f"<PN: {pretty_repr(self)}>"
 
     def __repr__(self: PN) -> str:
         if self._call_state is PipeNode.State.FACTORY:
-            return f"<PNF: {_repr(self)}>"
-        return f"<PN: {_repr(self)}>"
+            return f"<PNF: {pretty_repr(self)}>"
+        return f"<PN: {pretty_repr(self)}>"
 
     def partial(self: PN, *args: str, **kwargs: str) -> PN:
         """
@@ -720,7 +723,7 @@ def _has_key_positions(*key_positions: KeyPostion) -> bool:
     return not bool(len(key_positions) == 1 and callable(key_positions[0]))
 
 
-def _is_unbound_self_method(
+def is_unbound_self_method(
     core_callable: tp.Union[classmethod, staticmethod, tp.Callable],
     *,
     self_keyword: str,
@@ -817,7 +820,7 @@ def _handle_descriptors_and_key_positions(
         final_callable = key_positions[0]
         assert callable(final_callable), (type(final_callable), final_callable)
 
-        if _is_unbound_self_method(final_callable, self_keyword=self_keyword):
+        if is_unbound_self_method(final_callable, self_keyword=self_keyword):
             return PipeNodeDescriptor(final_callable, core_handler)
 
         return core_handler(final_callable)
@@ -825,7 +828,7 @@ def _handle_descriptors_and_key_positions(
     def decorator_wrapper(
         core_callable: tp.Callable,
     ) -> tp.Union[PipeNodeDescriptor, HandlerT]:
-        if _is_unbound_self_method(core_callable, self_keyword=self_keyword):
+        if is_unbound_self_method(core_callable, self_keyword=self_keyword):
             return PipeNodeDescriptor(core_callable, core_handler, key_positions)
 
         final_callable = _pipe_kwarg_bind(*key_positions)(core_callable)
