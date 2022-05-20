@@ -70,6 +70,38 @@ def _wrap_binary(func: tp.Callable[[FN, tp.Any], FN]) -> tp.Callable[[FN, tp.Any
     return binary
 
 
+def _from_this_module(tb: types.TracebackType) -> bool:
+    return tb.tb_frame.f_code.co_filename == __file__
+
+
+def _exception_with_cleaned_tb(original_exception: Exception) -> Exception:
+    """
+    Return back a new exception, where traceback is pointing to the first frame with code originating outside this module.
+    """
+    tb = original_exception.__traceback__
+    assert tb is not None
+    tb_next = None
+
+    assert _from_this_module(tb)  # Sanity
+
+    while True:
+        tb_next = tb.tb_next
+
+        # If `tb_next` is None, it means everything from the stack came from this module.
+        # Use the original exception
+        if tb_next is None:
+            return original_exception
+
+        # If `tb_next` originates from outside the module, it means we are done looking
+        if not _from_this_module(tb_next):
+            break
+
+        # We are still observing frames from inside the module; keep looking
+        tb = tb_next
+
+    return original_exception.__class__(*original_exception.args).with_traceback(tb_next)
+
+
 _BINARY_OP_MAP = {
     "__add__": "+",
     "__sub__": "-",
@@ -258,7 +290,10 @@ class FunctionNode:
         """
         Call the wrapped function with args and kwargs.
         """
-        return self._function(*args, **kwargs)
+        try:
+            return self._function(*args, **kwargs)
+        except Exception as e:
+            raise _exception_with_cleaned_tb(e) from None
 
     def __str__(self: FN) -> str:
         return f"<FN: {_repr(self)}>"
@@ -615,14 +650,20 @@ class PipeNode(FunctionNode):
         Call the wrapped function with args and kwargs.
         """
         if self._call_state is PipeNode.State.FACTORY:
-            return self._function(*args, **kwargs)
+            try:
+                return self._function(*args, **kwargs)
+            except Exception as e:
+                raise _exception_with_cleaned_tb(e) from None
 
         if args or set(kwargs) - PIPE_NODE_KWARGS != set():
             raise ValueError(
-                "Cannot call a PipeNode with args or non-pipeline kwargs! Please refer to the documentation for proper usage."
+                "Cannot call a PipeNode with args or non-pipeline kwargs! Perhaps you meant to use @pipe_node_factory?"
             )
 
-        return self._function(**kwargs)
+        try:
+            return self._function(**kwargs)
+        except Exception as e:
+            raise _exception_with_cleaned_tb(e) from None
 
 
 # -------------------------------------------------------------------------------
