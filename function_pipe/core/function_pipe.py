@@ -930,8 +930,7 @@ def pipe_node_factory(
         decorated_core_callable = core_decorator(core_callable)
 
         def factory_f(*f_args: tp.Any, **f_kwargs: tp.Any) -> PipeNode:
-            """
-            This is the function returned by the decorator, used to create the PipeNode that resides in expressions after being called with arguments.
+            """This is the function returned by the decorator, used to create the PipeNode that resides in expressions after being called with arguments.
 
             f_args and f_kwargs are passed to the core_callable; if f_args or f_kwargs are PipeNode instances, they will be called with the processing args and kwargs (including PN_INPUT), either from process_f or (if innermost) from expression args.
             """
@@ -941,8 +940,7 @@ def pipe_node_factory(
                 )
 
             def expression_f(**e_kwargs: tp.Any) -> PipeNode:
-                """
-                This is the PipeNode that resides in expressions prior to `|` operator evalation.
+                """This is the PipeNode that resides in expressions prior to `|` operator evalation.
                 When called with `|`, the predecessor is passed is in e_kwargs as PREDECESSOR_PN. In this usage the e_args will always be empty.
 
                 When in the innermost position, expression_f is never called with `|` but with the PN_INPUT; this sitation is identified and the core_callable is called immediately.
