@@ -74,7 +74,7 @@ def _from_this_module(tb: types.TracebackType) -> bool:
     return tb.tb_frame.f_code.co_filename == __file__
 
 
-def _exception_with_cleaned_tb(original_exception: BaseException) -> BaseException:
+def _exception_with_cleaned_tb(original_exception: Exception) -> Exception:
     """
     Return back a new exception, where traceback is pointing to the first frame with code originating outside this module.
     """
@@ -292,7 +292,7 @@ class FunctionNode:
         """
         try:
             return self._function(*args, **kwargs)
-        except BaseException as e:
+        except Exception as e:
             raise _exception_with_cleaned_tb(e) from None
 
     def __str__(self: FN) -> str:
@@ -652,7 +652,7 @@ class PipeNode(FunctionNode):
         if self._call_state is PipeNode.State.FACTORY:
             try:
                 return self._function(*args, **kwargs)
-            except BaseException as e:
+            except Exception as e:
                 raise _exception_with_cleaned_tb(e) from None
 
         if args or set(kwargs) - PIPE_NODE_KWARGS != set():
@@ -662,7 +662,7 @@ class PipeNode(FunctionNode):
 
         try:
             return self._function(**kwargs)
-        except BaseException as e:
+        except Exception as e:
             raise _exception_with_cleaned_tb(e) from None
 
 
