@@ -4,6 +4,7 @@
 # pylint: disable=pointless-string-statement, pointless-statement
 # pylint: disable=C0328
 import functools
+import traceback
 import types
 import unittest
 
@@ -11,7 +12,7 @@ from function_pipe.core import function_pipe as fpn  # pylint: disable=E0401
 
 
 class TestUnit(unittest.TestCase):
-    def test_basic_expressions_a(self):
+    def test_basic_expressions_a(self) -> None:
         class TestInput(fpn.PipeNodeInput):
             def get_origin(self):
                 return 32
@@ -73,7 +74,7 @@ class TestUnit(unittest.TestCase):
         post = f(pn_input=pni)
         self.assertEqual(post, 32)
 
-    def test_basic_expressions_b(self):
+    def test_basic_expressions_b(self) -> None:
         @fpn.pipe_node
         def foo1(**kwargs):
             return 12
@@ -85,7 +86,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(12, (bar1 | foo1)[None])
         self.assertEqual(13, (foo1 | bar1)[None])
 
-    def test_basic_expressions_c(self):
+    def test_basic_expressions_c(self) -> None:
         @fpn.pipe_node(fpn.PN_INPUT)
         def foo2(pni):
             return pni
@@ -96,7 +97,7 @@ class TestUnit(unittest.TestCase):
 
         self.assertEqual(27 * 2, (foo2 | bar2)[27])
 
-    def test_basic_expressions_d(self):
+    def test_basic_expressions_d(self) -> None:
         @fpn.pipe_node(fpn.PN_INPUT)
         def foo3(pni):
             return pni
@@ -107,7 +108,7 @@ class TestUnit(unittest.TestCase):
 
         self.assertEqual(27 * 2, (foo3 | bar3)[27])
 
-    def test_basic_expressions_e(self):
+    def test_basic_expressions_e(self) -> None:
         @fpn.pipe_node_factory
         def foo4(arg, **kwargs):
             return 12 + arg
@@ -119,7 +120,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(12 + 7, (bar4(6) | foo4(7))[None])
         self.assertEqual(13 - 6, (foo4(7) | bar4(6))[None])
 
-    def test_basic_expressions_f(self):
+    def test_basic_expressions_f(self) -> None:
         @fpn.pipe_node_factory(fpn.PN_INPUT)
         def foo5(pni, arg):
             return pni + arg
@@ -130,7 +131,7 @@ class TestUnit(unittest.TestCase):
 
         self.assertEqual(27 * 2 + 8 - 2, (foo5(8) | bar5(2))[27])
 
-    def test_basic_expressions_g(self):
+    def test_basic_expressions_g(self) -> None:
         @fpn.pipe_node_factory(fpn.PN_INPUT)
         def foo6(pni, arg):
             return pni + arg
@@ -141,7 +142,7 @@ class TestUnit(unittest.TestCase):
 
         self.assertEqual(27 * 2 + 8 - 2, (foo6(8) | bar6(2))[27])
 
-    def test_methods_defined_on_classes(self):
+    def test_methods_defined_on_classes(self) -> None:
 
         uno_mismo_pipe_node = functools.partial(fpn.pipe_node, self_keyword="uno_mismo")
         uno_mismo_pipe_node_factory = functools.partial(
@@ -407,7 +408,7 @@ class TestUnit(unittest.TestCase):
                 uno_mismo="re-provided", **{fpn.PN_INPUT: pni}
             )
 
-    def test_bound_and_unbound_pipe_nodes(self):
+    def test_bound_and_unbound_pipe_nodes(self) -> None:
         @fpn.pipe_node
         def pn_unbound(**kwargs):
             return kwargs[fpn.PN_INPUT]
@@ -429,7 +430,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(pn_unbound[pni], pn_bound[pni])
         self.assertEqual(pnf_unbound("fval")[pni], pnf_bound("fval")[pni])
 
-    def test_complex_pipeline(self):
+    def test_complex_pipeline(self) -> None:
         @fpn.pipe_node_factory(fpn.PREDECESSOR_RETURN)
         def multiply(prev, val):
             return prev * val
@@ -528,7 +529,7 @@ class TestUnit(unittest.TestCase):
 
         self.assertEqual(pni.store_items, dict(A=A, B=B, C=C, D=D).items())
 
-    def test_core_decorator(self):
+    def test_core_decorator(self) -> None:
         # Modify the core_decorators
         found_f = set()
 
@@ -646,11 +647,13 @@ class TestUnit(unittest.TestCase):
             found_f,
         )
 
-    def test_repr_a(self):
+    def test_pn_repr_a(self) -> None:
         @fpn.pipe_node_factory()
         def factory(arg1, arg2, *, kwarg):
             pass
 
+        self.assertEqual("<PNF: factory>", str(factory))
+        self.assertEqual("<PNF: factory>", repr(factory))
         self.assertEqual("<PN: factory(1,2,kwarg=3)>", repr(factory(1, 2, kwarg=3)))
         self.assertEqual(
             "<PN: factory(1,2,kwarg=3) | factory(1,2,kwarg=3)>",
@@ -694,7 +697,7 @@ class TestUnit(unittest.TestCase):
             str(pn1 | pn2 | pn3(*args, **kwargs) | pn2 | pn1),
         )
 
-    def test_repr_b(self):
+    def test_pn_repr_b(self) -> None:
         @fpn.pipe_node()
         def a():
             return 1
@@ -779,7 +782,7 @@ class TestUnit(unittest.TestCase):
         )
         self.assertEqual("<PN: -d==e>", repr(complex_e))
 
-    def test_repr_c(self):
+    def test_pn_repr_c(self) -> None:
         lambda_func = lambda x: x + 2
         fn = fpn.pipe_node(lambda_func)
         self.assertEqual("<PN: lambda_func = lambda x: x + 2>", repr(fn))
@@ -788,7 +791,7 @@ class TestUnit(unittest.TestCase):
             repr(fpn.pipe_node(lambda x: x + 2)),
         )  # Isn't really an easy way to parse the lambda expression alone.
 
-    def test_cannot_store_twice(self):
+    def test_cannot_store_twice(self) -> None:
         @fpn.pipe_node()
         def pn():
             return 12
@@ -798,7 +801,7 @@ class TestUnit(unittest.TestCase):
         with self.assertRaises(KeyError):
             (pn | fpn.store("a") | fpn.store("a"))[pni]
 
-    def test_call(self):
+    def test_call(self) -> None:
         calls = []
 
         @fpn.pipe_node(fpn.PN_INPUT)
@@ -825,7 +828,7 @@ class TestUnit(unittest.TestCase):
 
         self.assertListEqual(["pn1", "pn2", "pn3"], calls)
 
-    def test_invalid_operations(self):
+    def test_invalid_operations(self) -> None:
         @fpn.pipe_node()
         def pn1():
             pass
@@ -852,7 +855,7 @@ class TestUnit(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             pn1.partial(1, 2, a=3, b=4)
 
-    def test_pn_states(self):
+    def test_pn_states(self) -> None:
         @fpn.pipe_node_factory()
         def factory(*args, **kwargs):
             pass
@@ -865,7 +868,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(fpn.PipeNode.State.EXPRESSION, pn.call_state)
         self.assertEqual(fpn.PipeNode.State.FACTORY, factory.call_state)
 
-    def test_predecessor_property(self):
+    def test_predecessor_property(self) -> None:
         testable = {}
 
         @fpn.pipe_node()
@@ -888,7 +891,7 @@ class TestUnit(unittest.TestCase):
         expr[None]
         self.assertEqual({"pn1": pn1.predecessor, "pn2": pn2.predecessor}, testable)
 
-    def test_ror(self):
+    def test_ror(self) -> None:
         class MissingOR:
             def __init__(self, state):
                 self.state = state
@@ -910,7 +913,7 @@ class TestUnit(unittest.TestCase):
         post = expr["pni"]
         self.assertEqual(343, post)
 
-    def test_invalid_factories(self):
+    def test_invalid_factories(self) -> None:
         @fpn.pipe_node_factory
         def bad_factory_a(**kwargs):
             pass
@@ -946,7 +949,7 @@ class TestUnit(unittest.TestCase):
         with self.assertRaises(ValueError):
             bad_factory_a()(pn_input=True, predecessor_return=True)
 
-    def test_invalid_pn_call(self):
+    def test_invalid_pn_call(self) -> None:
         @fpn.pipe_node()
         def pn_a():
             pass
@@ -967,7 +970,179 @@ class TestUnit(unittest.TestCase):
         with self.assertRaises(ValueError):
             pn_b(kwarg=13)  # pylint: disable=unexpected-keyword-arg
 
-    def test_unwrapping(self):
+    def test_compose(self) -> None:
+        def square(x: int) -> int:
+            return x**2
+
+        def half(x: int) -> int:
+            return x // 2
+
+        functions = (square, half, half, square, half)
+
+        fnA = fpn.compose(*functions)
+        assert fnA(14) == square(half(half(square(half(14))))) == 144
+
+        fnB = fpn.compose(*reversed(functions))
+        assert fnB(14) == half(square(half(half(square(14))))) == 1200
+
+    def test_fn_str_repr(self) -> None:
+        def inc(x):
+            return x + 1
+
+        def square(x: int) -> int:
+            return x**2
+
+        def half(x: int) -> int:
+            return x // 2
+
+        fnA = fpn.compose(square, half, half, square, half)
+        fnB = fpn.FunctionNode(inc)
+        fnC = fnA >> fnB
+        fnD = fnB + fnA
+
+        self.assertEqual(str(fnA), repr(fnA))
+        self.assertEqual(str(fnB), repr(fnB))
+        self.assertEqual(str(fnC), repr(fnC))
+        self.assertEqual(str(fnD), repr(fnD))
+
+        self.assertEqual(str(fnA), "<FN: compose(half,square,half,half,square)>")
+        self.assertEqual(str(fnB), "<FN: inc>")
+        self.assertEqual(str(fnC), "<FN: compose(compose(half,square,half,half,square),inc)>")
+        self.assertEqual(str(fnD), "<FN: inc+(compose(half,square,half,half,square))>")
+
+    def test_fn_partialling(self) -> None:
+        def func(a, b, *, c, d=0):
+            print(a, b, c, d)
+            return a + b + c + d
+
+        fnA = fpn.FunctionNode(func)
+        self.assertEqual(fnA(1, 2, c=3, d=4), 10)
+
+        fnB = fnA + fnA
+        self.assertEqual(fnB(1, 2, c=3, d=4), 20)
+
+        fnC = fnA >> fnB
+        with self.assertRaises(TypeError):
+            fnC(1, 2, c=3, d=4)
+
+        fnD = fnA >> fnB.partial(20, c=30, d=40)
+        self.assertEqual(fnD(1, 2, c=3, d=4), 200)
+
+    def test_exception_with_cleaned_tb(self) -> None:
+        class TestingError(RuntimeError):
+            pass
+
+        def func():
+            raise TestingError("Testing")
+
+        try:
+            func()
+        except TestingError as e:
+            # We can not give this function arbitrary exceptions. It requires
+            # exceptions caught from _inside_ function_pipe.py
+            with self.assertRaises(AssertionError):
+                fpn._exception_with_cleaned_tb(e)
+
+        node = fpn.FunctionNode(func)
+
+        try:
+            node()
+        except TestingError as e:
+            frame_reprs = traceback.format_tb(e.__traceback__)
+
+        self.assertEqual(len(frame_reprs), 3)
+        self.assertIn("test_function_pipe.py", frame_reprs[0])
+        self.assertIn("test_exception_with_cleaned_tb", frame_reprs[0])
+        self.assertNotIn("test_function_pipe.py", frame_reprs[1])
+        self.assertIn("function_pipe.py", frame_reprs[1])
+        self.assertIn("_exception_with_cleaned_tb", frame_reprs[1])
+        self.assertIn("test_function_pipe.py", frame_reprs[2])
+        self.assertIn("TestingError", frame_reprs[2])
+
+    def test_fn_operators_a(self) -> None:
+        fn = fpn.FunctionNode(lambda x: x + 1)
+
+        self.assertEqual((fn + 3)(1), 2 + 3)
+        self.assertEqual((3 + fn)(1), 3 + 2)
+        self.assertEqual((fn - 3)(1), 2 - 3)
+        self.assertEqual((3 - fn)(1), 3 - 2)
+        self.assertEqual((fn * 3)(1), 2 * 3)
+        self.assertEqual((3 * fn)(1), 3 * 2)
+        self.assertEqual((fn / 3)(1), 2 / 3)
+        self.assertEqual((3 / fn)(1), 3 / 2)
+
+    def test_fn_operators_b(self) -> None:
+        half = fpn.FunctionNode(lambda x: x // 2)
+        square = lambda x: x ** 2
+
+        self.assertEqual((half >> square)(1), square(half(1)))
+        self.assertEqual((square >> half)(1), half(square(1)))
+
+        self.assertEqual((half << square)(1), half(square(1)))
+        self.assertEqual((square << half)(1), square(half(1)))
+
+        with self.assertRaises(NotImplementedError):
+            half | square
+
+        with self.assertRaises(NotImplementedError):
+            square | half
+
+    def test_is_unbound_self_method(self) -> None:
+
+        def classmethod_func(cls):
+            pass
+
+        def staticmethod_func():
+            pass
+
+        class TestClass:
+            def m_self(self):
+                pass
+
+            def m_uno_mismo(uno_mismo):
+                pass
+
+            @classmethod
+            def m_classmethod_a(cls):
+                pass
+
+            @staticmethod
+            def m_staticmethod_a():
+                pass
+
+            m_classmethod_b = classmethod(classmethod_func)
+            m_staticmethod_b = staticmethod(staticmethod_func)
+
+        m_classmethod_c = classmethod(classmethod_func)
+        m_staticmethod_c = staticmethod(staticmethod_func)
+
+        func_self = functools.partial(fpn._is_unbound_self_method, self_keyword="self")
+        func_uno_mismo = functools.partial(fpn._is_unbound_self_method, self_keyword="uno_mismo")
+
+        self.assertTrue(func_self(TestClass.m_self))
+        self.assertFalse(func_uno_mismo(TestClass.m_self))
+        self.assertFalse(func_self(TestClass.m_uno_mismo))
+        self.assertTrue(func_uno_mismo(TestClass.m_uno_mismo))
+
+        self.assertFalse(func_self(TestClass.m_classmethod_a))
+        self.assertFalse(func_uno_mismo(TestClass.m_classmethod_a))
+        self.assertFalse(func_self(TestClass.m_staticmethod_a))
+        self.assertFalse(func_uno_mismo(TestClass.m_staticmethod_a))
+
+        self.assertFalse(func_self(TestClass.m_classmethod_b))
+        self.assertFalse(func_uno_mismo(TestClass.m_classmethod_b))
+        self.assertFalse(func_self(TestClass.m_staticmethod_b))
+        self.assertFalse(func_uno_mismo(TestClass.m_staticmethod_b))
+
+        self.assertFalse(func_self(m_classmethod_c))
+        self.assertFalse(func_uno_mismo(m_classmethod_c))
+        self.assertFalse(func_self(m_staticmethod_c))
+        self.assertFalse(func_uno_mismo(m_staticmethod_c))
+
+        self.assertFalse(func_self(functools.partial(classmethod_func, cls=None)))
+        self.assertFalse(func_uno_mismo(functools.partial(classmethod_func, cls=None)))
+
+    def test_unwrapping(self) -> None:
         @fpn.pipe_node
         def pn1(*args, **kwargs):
             return 1
@@ -994,7 +1169,7 @@ class TestUnit(unittest.TestCase):
         test_pn1(pn2 | pn1)
         test_pn1(pn2 | pn4() | pn1)
 
-        def test_pn2(pn_or_expr):
+        def test_pn2(pn_or_expr) -> None:
             with self.assertRaises(KeyError):
                 pn_or_expr.unwrap(1, 2)
 
@@ -1009,7 +1184,7 @@ class TestUnit(unittest.TestCase):
         test_pn2(pn1 | pn2)
         test_pn2(pn1 | pn3() | pn2)
 
-        def test_pn3(pn_or_expr):
+        def test_pn3(pn_or_expr) -> None:
             with self.assertRaises(KeyError):
                 pn_or_expr.unwrap(1, b=2, c=8)  # Missing predecessor_return
 
@@ -1024,7 +1199,7 @@ class TestUnit(unittest.TestCase):
         test_pn3(pn2 | pn4(1) | pn3())
 
         # pn4
-        def test_pn4(pn_or_expr):
+        def test_pn4(pn_or_expr) -> None:
             with self.assertRaises(KeyError):
                 pn_or_expr.unwrap(1)  # Missing predecessor_return
 
@@ -1040,7 +1215,3 @@ class TestUnit(unittest.TestCase):
         test_pn4(pn4)
         test_pn4(pn2 | pn4())
         test_pn4(pn1 | pn3() | pn4())
-
-
-if __name__ == "__main__":
-    unittest.main()

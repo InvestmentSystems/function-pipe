@@ -70,6 +70,40 @@ def _wrap_binary(func: tp.Callable[[FN, tp.Any], FN]) -> tp.Callable[[FN, tp.Any
     return binary
 
 
+def _from_this_module(some_tb: types.TracebackType) -> bool:
+    return some_tb.tb_frame.f_code.co_filename == __file__
+
+
+def _exception_with_cleaned_tb(original_exception: BaseException) -> BaseException:
+    """
+    Return back a new exception, where traceback is pointing to the first frame with code originating outside this module.
+    """
+    tb = original_exception.__traceback__
+    assert tb is not None
+    tb_next = None
+
+    assert _from_this_module(tb) # Sanity
+
+    while True:
+        tb_next = tb.tb_next
+
+        # If `tb_next` is None, it means everything from the stack came from this module.
+        # Use the original exception
+        if tb_next is None:
+            return original_exception
+
+        # If `tb_next` originates from outside the module, it means we are done looking
+        if not _from_this_module(tb_next):
+            break
+
+        # We are still observing frames from inside the module; keep looking
+        tb = tb_next
+
+    return type(original_exception)(*original_exception.args).with_traceback(
+        tb_next
+    )
+
+
 _BINARY_OP_MAP = {
     "__add__": "+",
     "__sub__": "-",
@@ -493,40 +527,6 @@ PN_INPUT = "pn_input"
 PN_INPUT_SET = frozenset((PN_INPUT,))
 PREDECESSOR_PN_SET = frozenset((PREDECESSOR_PN,))
 PIPE_NODE_KWARGS = frozenset((PREDECESSOR_RETURN, PREDECESSOR_PN, PN_INPUT))
-
-
-def _from_module(some_tb: types.TracebackType) -> bool:
-    return some_tb.tb_frame.f_code.co_filename == __file__
-
-
-def _exception_with_cleaned_tb(original_exception: BaseException) -> BaseException:
-    """
-    Return back a new exception, where the top frames from the function_pipe module are removed.
-    """
-    tb = original_exception.__traceback__
-    assert tb is not None
-    tb_next = None
-
-    assert _from_module(tb)
-
-    while True:
-        tb_next = tb.tb_next
-
-        # If `tb_next` is None, it means everything from the stack came from this module.
-        # Use the original exception
-        if tb_next is None:
-            return original_exception
-
-        # If `tb_next` originates from outside the module, it means we are done looking
-        if not _from_module(tb_next):
-            break
-
-        # We are still observing frames from inside the module; keep looking
-        tb = tb_next
-
-    return type(original_exception)(*original_exception.args).with_traceback(
-        tb_next
-    )
 
 
 class PipeNode(FunctionNode):
