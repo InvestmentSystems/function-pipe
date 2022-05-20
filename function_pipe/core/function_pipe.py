@@ -911,10 +911,10 @@ def pipe_node_factory(
     >>> Example().method(1, b=2) # This is now a PipeNode!
 
     >>> from functools import partial
-    >>> español_pipe_node = partial(pipe_node, self_keyword="uno_mismo")
+    >>> español_pipe_node_factory = partial(pipe_node_factory, self_keyword="uno_mismo")
     >>> ...
     >>> class Ejemplo:
-    >>>     @pipe_node_factory(PN_INPUT, PREDECESSOR_RETURN)
+    >>>     @español_pipe_node_factory(PN_INPUT, PREDECESSOR_RETURN)
     >>>     def método(uno_mismo, pn_input, valor_anterior, a, *, b):
     >>>         pass
     >>> ...
@@ -1058,6 +1058,7 @@ def pipe_node(
 
     >>> from functools import partial
     >>> español_pipe_node = partial(pipe_node, self_keyword="uno_mismo")
+    >>> ...
     >>> class Ejemplo:
     >>>     @español_pipe_node(PN_INPUT)
     >>>     def método(uno_mismo, pn_input):
