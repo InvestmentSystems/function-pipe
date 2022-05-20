@@ -70,8 +70,8 @@ def _wrap_binary(func: tp.Callable[[FN, tp.Any], FN]) -> tp.Callable[[FN, tp.Any
     return binary
 
 
-def _from_this_module(some_tb: types.TracebackType) -> bool:
-    return some_tb.tb_frame.f_code.co_filename == __file__
+def _from_this_module(tb: types.TracebackType) -> bool:
+    return tb.tb_frame.f_code.co_filename == __file__
 
 
 def _exception_with_cleaned_tb(original_exception: BaseException) -> BaseException:
