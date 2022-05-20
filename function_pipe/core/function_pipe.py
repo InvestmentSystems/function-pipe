@@ -99,7 +99,9 @@ def _exception_with_cleaned_tb(original_exception: Exception) -> Exception:
         # We are still observing frames from inside the module; keep looking
         tb = tb_next
 
-    return original_exception.__class__(*original_exception.args).with_traceback(tb_next)
+    return original_exception.__class__(*original_exception.args).with_traceback(
+        tb_next
+    )
 
 
 _BINARY_OP_MAP = {
