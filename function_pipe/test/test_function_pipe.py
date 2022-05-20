@@ -1007,7 +1007,9 @@ class TestUnit(unittest.TestCase):
 
         self.assertEqual(str(fnA), "<FN: compose(half,square,half,half,square)>")
         self.assertEqual(str(fnB), "<FN: inc>")
-        self.assertEqual(str(fnC), "<FN: compose(compose(half,square,half,half,square),inc)>")
+        self.assertEqual(
+            str(fnC), "<FN: compose(compose(half,square,half,half,square),inc)>"
+        )
         self.assertEqual(str(fnD), "<FN: inc+(compose(half,square,half,half,square))>")
 
     def test_fn_partialling(self) -> None:
@@ -1073,7 +1075,7 @@ class TestUnit(unittest.TestCase):
 
     def test_fn_operators_b(self) -> None:
         half = fpn.FunctionNode(lambda x: x // 2)
-        square = lambda x: x ** 2
+        square = lambda x: x**2
 
         self.assertEqual((half >> square)(1), square(half(1)))
         self.assertEqual((square >> half)(1), half(square(1)))
@@ -1088,7 +1090,6 @@ class TestUnit(unittest.TestCase):
             square | half
 
     def test_is_unbound_self_method(self) -> None:
-
         def classmethod_func(cls):
             pass
 
@@ -1117,7 +1118,9 @@ class TestUnit(unittest.TestCase):
         m_staticmethod_c = staticmethod(staticmethod_func)
 
         func_self = functools.partial(fpn._is_unbound_self_method, self_keyword="self")
-        func_uno_mismo = functools.partial(fpn._is_unbound_self_method, self_keyword="uno_mismo")
+        func_uno_mismo = functools.partial(
+            fpn._is_unbound_self_method, self_keyword="uno_mismo"
+        )
 
         self.assertTrue(func_self(TestClass.m_self))
         self.assertFalse(func_uno_mismo(TestClass.m_self))

@@ -82,7 +82,7 @@ def _exception_with_cleaned_tb(original_exception: BaseException) -> BaseExcepti
     assert tb is not None
     tb_next = None
 
-    assert _from_this_module(tb) # Sanity
+    assert _from_this_module(tb)  # Sanity
 
     while True:
         tb_next = tb.tb_next
@@ -99,9 +99,7 @@ def _exception_with_cleaned_tb(original_exception: BaseException) -> BaseExcepti
         # We are still observing frames from inside the module; keep looking
         tb = tb_next
 
-    return type(original_exception)(*original_exception.args).with_traceback(
-        tb_next
-    )
+    return type(original_exception)(*original_exception.args).with_traceback(tb_next)
 
 
 _BINARY_OP_MAP = {
