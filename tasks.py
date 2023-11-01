@@ -106,7 +106,7 @@ def formatting(context, check=False):
 def build(context):
     """Build packages
     """
-    context.run(f"{sys.executable} setup.py sdist bdist_wheel")
+    context.run(f"{sys.executable} setup.py sdist")
 
 @invoke.task(pre=(build,), post=(clean,))
 def release(context):
