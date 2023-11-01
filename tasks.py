@@ -110,4 +110,4 @@ def build(context):
 
 @invoke.task(pre=(build,), post=(clean,))
 def release(context):
-    context.run("twine upload dist/*")
+    context.run("twine upload dist/* --repository function-pipe")
