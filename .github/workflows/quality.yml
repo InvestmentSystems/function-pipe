@@ -17,7 +17,7 @@ jobs:
         - command: invoke isort --check
         - command: invoke lint
         - command: invoke mypy
-        os: ['ubuntu-18.04', 'windows-2019', 'macos-11']
+        os: ['ubuntu-20.04', 'windows-2019', 'macos-11']
         python-version: ['3.7', '3.8', '3.9']
 
 
