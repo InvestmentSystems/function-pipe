@@ -3,4 +3,4 @@
 
 from function_pipe.core.function_pipe import *
 
-__version__ = "2.1.1"  # use .dev{n} for new version in development
+__version__ = "2.1.2"  # use .dev{n} for new version in development
