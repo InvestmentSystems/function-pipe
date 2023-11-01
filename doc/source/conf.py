@@ -31,7 +31,7 @@ extensions = [
     "sphinx.ext.autodoc",
     # "sphinx.ext.viewcode",
     # "sphinx.ext.graphviz",
-    "sphinxcontrib.jinja",
+    "sphinx_jinja",
     # "matplotlib.sphinxext.only_directives",
     # "matplotlib.sphinxext.plot_directive",
     # "sphinx.ext.autosectionlabel",
