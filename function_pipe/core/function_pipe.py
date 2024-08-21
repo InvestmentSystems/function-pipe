@@ -712,7 +712,7 @@ def _broadcast(
     return core_callable_args, core_callable_kwargs
 
 
-def _core_logger(core_callable: tp.Callable) -> tp.Callable:
+def _core_logger(core_callable: FuncT) -> FuncT:
     """
     A decorator to provide output on the execution of each core callable call. Alternative decorators can be used to partial pipe_node_factory and pipe_node.
     """
@@ -725,7 +725,7 @@ def _core_logger(core_callable: tp.Callable) -> tp.Callable:
     return wrapped
 
 
-def _has_key_positions(*key_positions: FuncT | str) -> bool:
+def _has_key_positions(key_positions: tuple[FuncT] | tuple[str, ...]) -> bool:
     """
     Returns whether or not key_positions is a list of key positions, or if it is just a single callable
     """
@@ -733,7 +733,7 @@ def _has_key_positions(*key_positions: FuncT | str) -> bool:
 
 
 def is_unbound_self_method(
-    core_callable: tp.Union[classmethod, staticmethod, tp.Callable],
+    core_callable: classmethod | staticmethod | FuncT,
     *,
     self_keyword: str,
 ) -> bool:
@@ -753,14 +753,12 @@ def is_unbound_self_method(
     return bool(argspec.args and argspec.args[0] == self_keyword)
 
 
-def _pipe_kwarg_bind(
-    *key_positions: FuncT | str,
-) -> tp.Callable[[tp.Callable], tp.Callable]:
+def _pipe_kwarg_bind(*key_positions: str) -> Decorator[FuncT]:
     """
     Binds a specific PipeNode labels wrapped up in **kwargs to the first n positional arguments of the core callable
     """
 
-    def decorator(core_callable: tp.Callable) -> tp.Callable:
+    def decorator(core_callable: FuncT) -> FuncT:
         @functools.wraps(core_callable)
         def wrapped(*args: tp.Any, **kwargs: tp.Any) -> tp.Any:
             target_args = [kwargs.pop(key) for key in key_positions]
@@ -787,9 +785,9 @@ class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
 
     def __init__(
         self: PipeNodeDescriptor,
-        core_callable: tp.Callable,
+        core_callable: FuncT,
         core_handler: Decorator[FuncT],
-        key_positions: tp.Optional[tuple[FuncT | str, ...]] = None,
+        key_positions: tuple[str, ...] | None = None,
     ) -> None:
         self.core_callable = core_callable
         self.core_handler = core_handler
@@ -799,11 +797,11 @@ class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
         self: PipeNodeDescriptor,
         instance: tp.Any,
         owner: tp.Any,
-    ) -> tp.Callable:
+    ) -> FuncT:
         """
         Returns a callable that will be bound to the instance/owner, and then passed along the pipeline.
         """
-        core_callable: tp.Callable = self.core_callable.__get__(instance, owner)
+        core_callable: FuncT = self.core_callable.__get__(instance, owner)  # type: ignore
         if self.key_positions is not None:
             core_callable = _pipe_kwarg_bind(*self.key_positions)(core_callable)
         return self.core_handler(core_callable)
@@ -822,7 +820,7 @@ def _handle_descriptors_and_key_positions(
     We can return either a callable or a ``PipeNodeDescriptor``, OR, a decorator that when called,
     will return either a callable or a ``PipeNodeDescriptor``.
     """
-    has_key_positions = _has_key_positions(*key_positions)
+    has_key_positions = _has_key_positions(key_positions)
 
     # See if decorator was given no arguments, and received the core_callable directly.
     if not has_key_positions:
@@ -853,7 +851,7 @@ def _descriptor_factory(
     emulator: tp.Any,
 ) -> tp.Any:
 
-    has_key_positions = _has_key_positions(*key_positions)
+    has_key_positions = _has_key_positions(key_positions)
 
     class Descriptor:  # pylint: disable=too-few-public-methods
         def __init__(self, func: tp.Callable) -> None:
