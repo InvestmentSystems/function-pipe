@@ -22,12 +22,17 @@ import typing as tp
 
 # -------------------------------------------------------------------------------
 # FunctionNode and utilities
+@tp.runtime_checkable
 class FuncT(tp.Protocol):
     def __call__(self, *args: tp.Any, **kwargs: tp.Any) -> tp.Any:
         ...
 
 
-SimpleDecor = tp.Callable[[FuncT], FuncT]
+_DecoratorT = tp.TypeVar("_DecoratorT", bound=FuncT)
+Decorator = tp.Callable[[_DecoratorT], _DecoratorT]
+
+UnaryFunc = Decorator["FunctionNode"]
+BinaryFunc = tp.Callable[["FunctionNode", tp.Any], "FunctionNode"]
 
 
 def compose(*funcs: FuncT) -> FunctionNode:
@@ -52,15 +57,13 @@ def compose(*funcs: FuncT) -> FunctionNode:
     )
 
 
-def _wrap_unary(
-    func: tp.Callable[[FunctionNode], FunctionNode]
-) -> tp.Callable[[FunctionNode], FunctionNode]:
+def _wrap_unary(func: UnaryFunc) -> UnaryFunc:
     """
     Decorator for operator overloads. Given a higher order function that takes one args, wrap it in a FunctionNode function and provide documentation labels.
     """
 
     @functools.wraps(func)
-    def unary(lhs: FN) -> FN:
+    def unary(lhs: FunctionNode) -> FunctionNode:
         # wrapped function will prepare correct class, even if a constant
         cls = lhs.__class__
         return cls(func(lhs), doc_function=func, doc_args=(lhs,))
@@ -68,21 +71,16 @@ def _wrap_unary(
     return unary
 
 
-def _wrap_binary(
-    operation: str, lhs_name: str, rhs_name: str, clause: str
-) -> tp.Callable[
-    [tp.Callable[[FunctionNode, tp.Any], FunctionNode]],
-    tp.Callable[[FunctionNode, tp.Any], FunctionNode],
-]:
-    def binary_decorator(
-        func: tp.Callable[[FunctionNode, tp.Any], FunctionNode]
-    ) -> tp.Callable[[FunctionNode, tp.Any], FunctionNode]:
-        """Decorator for operators. Given a higher order function that takes two args, wrap it in a FunctionNode function and provide documentation labels."""
-
+def _wrap_binary(operation: str, lhs_name: str, rhs_name: str, clause: str) -> Decorator[BinaryFunc]:
+    def binary_decorator(func: BinaryFunc) -> BinaryFunc:
+        """
+        Decorator for operators.
+        Given a higher order function that takes two args, wrap it in a FunctionNode function and provide documentation labels.
+        """
         @functools.wraps(func)
         def binary(lhs: FunctionNode, rhs: tp.Any) -> FunctionNode:
             # wrapped function will prepare correct class, even if a constant
-            cls = PipeNode if isinstance(lhs, PipeNode) else FunctionNode
+            cls = lhs.__class__
             return cls(func(lhs, rhs), doc_function=func, doc_args=(lhs, rhs))
 
         binary.__doc__ = f"Return a new FunctionNode that will {operation} the result of ``{lhs_name}`` {clause} the result of ``{rhs_name}``"
@@ -262,14 +260,19 @@ class FunctionNode:
         "_doc_kwargs",
     )
 
+    _function: FuncT
+    _doc_function: FuncT
+    _doc_args: tuple[tp.Any, ...]
+    _doc_kwargs: dict[str, tp.Any] | None
+
     # ---------------------------------------------------------------------------
     def __init__(
-        self: FunctionNode,
-        function: tp.Any,
+        self,
+        function: FuncT | tp.Any,
         *,
-        doc_function: tp.Optional[tp.Callable] = None,
-        doc_args: tp.Tuple[tp.Any, ...] = (),
-        doc_kwargs: tp.Optional[tp.Dict[str, tp.Any]] = None,
+        doc_function: tp.Callable[..., tp.Any] | None = None,
+        doc_args: tuple[tp.Any, ...] = (),
+        doc_kwargs: dict[str, tp.Any] | None = None,
     ) -> None:
         """
         Args:
@@ -284,30 +287,31 @@ class FunctionNode:
         if isinstance(function, FunctionNode):
             for attr in self.__slots__:
                 setattr(self, attr, getattr(function, attr))
-        else:
-            if callable(function):
-                self._function = function
-            else:
-                # if not a callable, we upgrade a constant, non function value to be a function that returns that value
-                self._function = lambda *args, **kwargs: function
+            return
 
-            # if not supplied, doc_function is set to function
-            self._doc_function = doc_function if doc_function else self._function
-            self._doc_args = doc_args
-            self._doc_kwargs = doc_kwargs
+        if callable(function):
+            self._function = function
+        else:
+            def constant_wrapper(*args: tp.Any, **kwargs: tp.Any) -> tp.Any:
+                return function
+
+            self._function = constant_wrapper
+
+        # if not supplied, doc_function is set to function
+        self._doc_function = doc_function if doc_function else self._function
+        self._doc_args = doc_args
+        self._doc_kwargs = doc_kwargs
 
     @property
-    def unwrap(self) -> tp.Callable:
+    def unwrap(self) -> FuncT:
         """
         The doc_function should be set to the core function being wrapped, no matter the level of wrapping.
         """
-        # if the stored function is using _pipe_kwarg_bind, need to go lower
-        doc_func = self
-        while hasattr(doc_func, "_doc_function"):
-            doc_func = getattr(doc_func, "_doc_function")
-        return doc_func
+        if hasattr(self, "_doc_function"):
+            return self._doc_function
+        return self
 
-    def __call__(self: FunctionNode, *args: tp.Any, **kwargs: tp.Any) -> tp.Any:
+    def __call__(self, *args: tp.Any, **kwargs: tp.Any) -> tp.Any:
         """
         Call the wrapped function with args and kwargs.
         """
@@ -322,7 +326,7 @@ class FunctionNode:
     def __repr__(self) -> str:
         return f"<FN: {pretty_repr(self)}>"
 
-    def partial(self: FunctionNode, *args: tp.Any, **kwargs: tp.Any) -> "FunctionNode":
+    def partial(self, *args: tp.Any, **kwargs: tp.Any) -> FunctionNode:
         """
         Return a new FunctionNode with a partialed function with args and kwargs.
         """
@@ -771,7 +775,7 @@ class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
     def __init__(
         self: PipeNodeDescriptor,
         core_callable: tp.Callable,
-        core_handler: SimpleDecor,
+        core_handler: Decorator[FuncT],
         key_positions: tp.Optional[tp.Tuple[FuncT | str, ...]] = None,
     ) -> None:
         self.core_callable = core_callable
@@ -794,12 +798,12 @@ class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
 
 def _handle_descriptors_and_key_positions(
     *key_positions: FuncT | str,
-    core_handler: SimpleDecor,
+    core_handler: Decorator[FuncT],
     self_keyword: str,
 ) -> tp.Union[
     PipeNodeDescriptor,
-    SimpleDecor,
-    tp.Callable[[tp.Callable], tp.Union[PipeNodeDescriptor, SimpleDecor]],
+    Decorator[FuncT],
+    tp.Callable[[tp.Callable], tp.Union[PipeNodeDescriptor, Decorator[FuncT]]],
 ]:
     """
     We can return either a callable or a ``PipeNodeDescriptor``, OR, a decorator that when called,
@@ -819,7 +823,7 @@ def _handle_descriptors_and_key_positions(
 
     def decorator_wrapper(
         core_callable: tp.Callable,
-    ) -> tp.Union[PipeNodeDescriptor, SimpleDecor]:
+    ) -> tp.Union[PipeNodeDescriptor, Decorator[FuncT]]:
         if is_unbound_self_method(core_callable, self_keyword=self_keyword):
             return PipeNodeDescriptor(core_callable, core_handler, key_positions)
 
@@ -832,7 +836,7 @@ def _handle_descriptors_and_key_positions(
 def _descriptor_factory(
     *key_positions: FuncT | str,
     decorator: tp.Callable,
-    core_decorator: SimpleDecor,
+    core_decorator: Decorator[FuncT],
     emulator: tp.Any,
 ) -> tp.Any:
 
@@ -871,7 +875,7 @@ def _descriptor_factory(
 
 def pipe_node_factory(
     *key_positions: FuncT | str,
-    core_decorator: SimpleDecor = _core_logger,
+    core_decorator: Decorator[FuncT] = _core_logger,
     self_keyword: str = "self",
 ) -> tp.Union[tp.Callable, tp.Callable[[tp.Any], PipeNode]]:
     """
@@ -1027,7 +1031,7 @@ def pipe_node_factory(
 
 def pipe_node(
     *key_positions: FuncT | str,
-    core_decorator: SimpleDecor = _core_logger,
+    core_decorator: Decorator[FuncT] = _core_logger,
     self_keyword: str = "self",
 ) -> tp.Union[tp.Callable, PipeNode]:
     """
@@ -1085,7 +1089,7 @@ def pipe_node(
 
 
 def classmethod_pipe_node_factory(
-    *key_positions: FuncT | str, core_decorator: SimpleDecor = _core_logger
+    *key_positions: FuncT | str, core_decorator: Decorator[FuncT] = _core_logger
 ) -> tp.Callable:
     """
     Decorates a function to become a classmethod pipe node factory, that when given *expression-level* arguments, will return a ``PipeNode``
@@ -1134,7 +1138,7 @@ def classmethod_pipe_node_factory(
 
 def classmethod_pipe_node(
     *key_positions: FuncT | str,
-    core_decorator: SimpleDecor = _core_logger,
+    core_decorator: Decorator[FuncT] = _core_logger,
 ) -> tp.Union[tp.Callable, PipeNode]:
     """
     Decorates a function to become a classmethod ``PipeNode`` that takes no expression-level args.
@@ -1174,7 +1178,7 @@ def classmethod_pipe_node(
 
 
 def staticmethod_pipe_node_factory(
-    *key_positions: FuncT | str, core_decorator: SimpleDecor = _core_logger
+    *key_positions: FuncT | str, core_decorator: Decorator[FuncT] = _core_logger
 ) -> tp.Callable:
     """
     Decorates a function to become a staticmethod pipe node factory, that when given *expression-level* arguments, will return a ``PipeNode``
@@ -1223,7 +1227,7 @@ def staticmethod_pipe_node_factory(
 
 def staticmethod_pipe_node(
     *key_positions: FuncT | str,
-    core_decorator: SimpleDecor = _core_logger,
+    core_decorator: Decorator[FuncT] = _core_logger,
 ) -> tp.Union[tp.Callable, PipeNode]:
     """
     Decorates a function to become a staticmethod ``PipeNode`` that takes no expression-level args.
