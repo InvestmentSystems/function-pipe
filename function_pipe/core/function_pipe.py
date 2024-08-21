@@ -784,7 +784,7 @@ class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
     )
 
     def __init__(
-        self: PipeNodeDescriptor,
+        self,
         core_callable: FuncT,
         core_handler: Decorator[FuncT],
         key_positions: tuple[str, ...] | None = None,
@@ -793,11 +793,7 @@ class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
         self.core_handler = core_handler
         self.key_positions = key_positions
 
-    def __get__(
-        self: PipeNodeDescriptor,
-        instance: tp.Any,
-        owner: tp.Any,
-    ) -> FuncT:
+    def __get__(self, instance: tp.Any, owner: tp.Any) -> FuncT:
         """
         Returns a callable that will be bound to the instance/owner, and then passed along the pipeline.
         """

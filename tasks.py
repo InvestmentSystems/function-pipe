@@ -2,12 +2,12 @@ import sys
 
 import invoke
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 @invoke.task
 def clean(context):
-    """Clean doc and build artifacts
-    """
+    """Clean doc and build artifacts"""
     context.run("rm -rf coverage.xml")
     context.run("rm -rf htmlcov")
     context.run("rm -rf doc/build")
@@ -21,18 +21,15 @@ def clean(context):
     context.run("rm -rf .ipynb_checkpoints")
 
 
-
 @invoke.task()
 def doc(context):
-    """Build docs
-    """
+    """Build docs"""
     context.run(f"{sys.executable} doc/doc_build.py")
 
 
 @invoke.task
 def test(context, cov=False):
-    """Run tests.
-    """
+    """Run tests."""
     cmd = f"pytest -s function_pipe/test"
 
     if cov:
@@ -49,26 +46,25 @@ def coverage(context):
     cmd = "pytest -s --color no --cov=function_pipe/core --cov-report html"
     context.run(cmd, echo=True)
     import webbrowser
+
     webbrowser.open("htmlcov/index.html")
 
 
 @invoke.task
 def mypy(context):
-    """Run mypy static analysis.
-    """
+    """Run mypy static analysis."""
     context.run("mypy function_pipe/core --strict")
 
 
 @invoke.task
 def lint(context):
-    """Run pylint static analysis.
-    """
+    """Run pylint static analysis."""
     context.run("pylint -f colorized function_pipe")
+
 
 @invoke.task(pre=(mypy, lint))
 def quality(context):
-    """Perform all quality checks.
-    """
+    """Perform all quality checks."""
 
 
 @invoke.task
@@ -100,13 +96,14 @@ def formatting(context, check=False):
     isort(context, check=check)
 
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 @invoke.task(pre=(clean,))
 def build(context):
-    """Build packages
-    """
+    """Build packages"""
     context.run(f"{sys.executable} setup.py sdist")
+
 
 @invoke.task(pre=(build,), post=(clean,))
 def release(context):
