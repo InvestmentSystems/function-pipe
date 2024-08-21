@@ -19,7 +19,6 @@ import re
 import sys
 import types
 import typing as tp
-import typing_extensions as tp_ext
 
 # -------------------------------------------------------------------------------
 # FunctionNode and utilities
@@ -72,12 +71,15 @@ def _wrap_unary(func: UnaryFunc) -> UnaryFunc:
     return unary
 
 
-def _wrap_binary(operation: str, lhs_name: str, rhs_name: str, clause: str) -> Decorator[BinaryFunc]:
+def _wrap_binary(
+    operation: str, lhs_name: str, rhs_name: str, clause: str
+) -> Decorator[BinaryFunc]:
     def binary_decorator(func: BinaryFunc) -> BinaryFunc:
         """
         Decorator for operators.
         Given a higher order function that takes two args, wrap it in a FunctionNode function and provide documentation labels.
         """
+
         @functools.wraps(func)
         def binary(lhs: FunctionNode, rhs: tp.Any) -> FunctionNode:
             # wrapped function will prepare correct class, even if a constant
@@ -293,6 +295,7 @@ class FunctionNode:
         if callable(function):
             self._function = function
         else:
+
             def constant_wrapper(*args: tp.Any, **kwargs: tp.Any) -> tp.Any:
                 return function
 
@@ -627,17 +630,21 @@ class PipeNode(FunctionNode):
         """Only implemented for FunctionNode."""
         raise NotImplementedError()
 
-    def __or__(self, rhs: PipeNode) -> PipeNode:
+    def __or__(self, rhs: PipeNode) -> PipeNode:  # type: ignore
         """
         Invokes ``rhs``, passing in ``self`` as the kwarg ``PREDECESSOR_PN``.
         """
-        return rhs(**{PREDECESSOR_PN: self})
+        pn = rhs(**{PREDECESSOR_PN: self})
+        assert isinstance(pn, PipeNode)
+        return pn
 
-    def __ror__(self, lhs: PipeNode) -> PipeNode:
+    def __ror__(self, lhs: PipeNode) -> PipeNode:  # type: ignore
         """
         Invokes ``lhs``, passing in ``lhs`` as the kwarg ``PREDECESSOR_PN``.
         """
-        return self(**{PREDECESSOR_PN: lhs})
+        pn = self(**{PREDECESSOR_PN: lhs})
+        assert isinstance(pn, PipeNode)
+        return pn
 
     # ---------------------------------------------------------------------------
 
@@ -679,11 +686,11 @@ class PipeNode(FunctionNode):
 
 def _broadcast(
     *,
-    factory_args: tp.Tuple[tp.Any, ...],
-    factory_kwargs: tp.Dict[str, tp.Any],
-    processing_args: tp.Tuple[tp.Any, ...] = (),
-    processing_kwargs: tp.Dict[str, tp.Any],
-) -> tp.Tuple[tp.Tuple[tp.Any, ...], tp.Dict[str, tp.Any]]:
+    factory_args: tuple[tp.Any, ...],
+    factory_kwargs: dict[str, tp.Any],
+    processing_args: tuple[tp.Any, ...] = (),
+    processing_kwargs: dict[str, tp.Any],
+) -> tuple[tuple[tp.Any, ...], dict[str, tp.Any]]:
     """
     Factory args/kwargs are those given to pipe_node_factory at the expression level.
     Processing args/kwargs are those given as the initial input, and used to call all processing functions.
@@ -782,7 +789,7 @@ class PipeNodeDescriptor:  # pylint: disable=too-few-public-methods
         self: PipeNodeDescriptor,
         core_callable: tp.Callable,
         core_handler: Decorator[FuncT],
-        key_positions: tp.Optional[tp.Tuple[FuncT | str, ...]] = None,
+        key_positions: tp.Optional[tuple[FuncT | str, ...]] = None,
     ) -> None:
         self.core_callable = core_callable
         self.core_handler = core_handler
@@ -1282,7 +1289,7 @@ class PipeNodeInput:
     """
 
     def __init__(self: PipeNodeInput) -> None:
-        self._store: tp.Dict[str, tp.Any] = {}
+        self._store: dict[str, tp.Any] = {}
 
     def store(self: PipeNodeInput, key: str, value: tp.Any) -> None:
         """Store ``key`` and ``value`` in the underlying store."""
